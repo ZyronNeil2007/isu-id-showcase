@@ -61,10 +61,17 @@ For the most reliable local preview, serve the project folder with a simple stat
 
 The source is written in TypeScript and the build script uses esbuild to bundle the application and embed its assets into a standalone HTML file.
 
-The included `build.mjs` currently references an environment-specific esbuild installation path. To build on another computer, configure that path for your environment or update the script to use a locally installed esbuild package. Then run the build script with Node.js:
+Install dependencies and run type checking:
 
 ```bash
-node build.mjs
+npm install
+npm run typecheck
+```
+
+To build the standalone bundle:
+
+```bash
+npm run build
 ```
 
 The generated standalone output is written to `dist/index.html`.

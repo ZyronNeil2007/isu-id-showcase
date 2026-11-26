@@ -1,6 +1,6 @@
 // Build: embed assets -> bundle TypeScript with esbuild -> inline everything into dist/index.html
 import { readFileSync, writeFileSync } from 'node:fs';
-import { build } from '/opt/npm-tools/node_modules/esbuild/lib/main.js';
+import { build } from 'esbuild';
 const uri = (p, m) => `data:${m};base64,` + readFileSync(new URL(p, import.meta.url)).toString('base64');
 const A = {
   cardSeal: uri('assets/raw/seal.png', 'image/png'), cardWordmark: uri('assets/raw/wordmark.png', 'image/png'), cardPhoto: uri('assets/raw/photo.png', 'image/png'),

@@ -1,0 +1,23 @@
+{
+  "name": "isu-id-showcase",
+  "version": "1.0.0",
+  "description": "An unofficial, interactive 3D showcase of an Isabela State University (ISU) student ID card and lanyard.",
+  "type": "module",
+  "scripts": {
+    "build": "node build.mjs",
+    "typecheck": "tsc --noEmit"
+  },
+  "keywords": [
+    "threejs",
+    "webgl",
+    "showcase",
+    "student-id",
+    "interactive-3d"
+  ],
+  "author": "ZyronNeil2007",
+  "license": "MIT",
+  "devDependencies": {
+    "esbuild": "^0.28.2",
+    "typescript": "^5.9.3"
+  }
+}
