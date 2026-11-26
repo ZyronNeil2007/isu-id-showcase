@@ -5,7 +5,7 @@ import * as S from '../engine/shaders';
 import { slab, torus, roundedBox, capsule, sphere, sleeve, tube, catmull, Geo } from './geometry';
 import { buildPath, ribbon, Path } from './lanyard';
 import { handAttrs } from './handMesh';
-import { BONES, skinMatrices, poseFor } from './handRig';
+import { skinMatrices, poseFor, setHandUniforms } from './handRig';
 
 export interface CardDraw { M: M4; bend: [number, number]; glow: number; }
 export interface Frame {
@@ -27,7 +27,7 @@ interface Part { mesh: Mesh; M: M4; base: V3; rough: number; metal: number; jaw?
 export class World {
   gl: WebGL2RenderingContext;
   path: Path;
-  cardMesh: Mesh; holderMesh!: Mesh; strapMesh: Mesh; sleeveMesh: Mesh; wallMesh: Mesh; handMesh: Mesh; nailMesh: Mesh; knitMesh: Mesh;
+  cardMesh: Mesh; holderMesh!: Mesh; strapMesh: Mesh; sleeveMesh: Mesh; wallMesh: Mesh; handMesh: Mesh; knitMesh: Mesh;
   hardware: Part[] = [];
   shadow: ReturnType<GL['shadow']>;
   acc: ReturnType<GL['target']> | null = null; accOK = false;
@@ -35,7 +35,6 @@ export class World {
   lightVP = m4.ident(); vp = m4.ident(); view = m4.ident(); proj = m4.ident();
   tex!: Textures;
   P: Record<string, Prog> = {}; D: Record<string, Prog> = {};
-  nails: { bone: number; M: M4 }[] = [];
   constructor(public g: GL, public mobile: boolean) {
     this.gl = g.gl; const gl = this.gl;
     this.accOK = !!gl.getExtension('EXT_color_buffer_float') || !!gl.getExtension('EXT_color_buffer_half_float');
@@ -51,7 +50,6 @@ export class World {
     const wq = new Float32Array([-14, -9, 0, 14, -9, 0, 14, 9, 0, -14, 9, 0]);
     this.wallMesh = g.mesh([{ loc: 0, data: wq, size: 3 }], new Uint16Array([0, 1, 2, 0, 2, 3]));
     const h = handAttrs(); this.handMesh = g.mesh(h.attrs, h.idx);
-    const nl = sphere(18, 10); this.nailMesh = g.mesh(attrs(nl), nl.idx);
     // forearm sleeve (knit cuff) in hand space
     const knit = sleeve(-3.4, -0.62, (y, a) => {
       const t = (y + 3.4) / 2.78; const base = 0.36 + 0.08 * (1 - t) + 0.015 * Math.pow(1 - t, 2);
@@ -85,11 +83,6 @@ export class World {
     mk(torus(0.04, 0.0062, 56, 10), m4.mul(T3(0, -1.31, 0), m4.rotY(Math.PI / 2)), steel, 0.16, 1);
     const hold = slab(0.60, 0.96, 0.016, 0.05, 0.004, 8);
     this.holderMesh = g.mesh(attrs(hold), hold.idx);
-    // nails (bone-local dorsal side)
-    for (const bi of [4, 7, 10, 13, 16]) {
-      const b = BONES[bi], len = b.segB[1];
-      this.nails.push({ bone: bi, M: m4.mul(m4.translate(0, len * 0.62 + 0.02, -b.r1 * 0.86), m4.scale(b.r1 * 0.62, len * 0.5 + 0.02, 0.016)) });
-    }
     this.shadow = g.shadow(mobile ? 1024 : 2048);
     this.compile();
   }
@@ -148,7 +141,7 @@ export class World {
     const lview = m4.lookAt(v3.madd(lc, kd, 10), lc, [0, 1, 0]);
     this.lightVP = m4.mul(m4.ortho(-e, e, -e, e, 0.1, 20), lview);
 
-    if (f.blur && this.accOK && (!this.acc || this.acc.w !== f.w || this.acc.h !== f.h)) { if (this.acc) { gl.deleteTexture(this.acc.tex); gl.deleteFramebuffer(this.acc.fb); } gl.activeTexture(gl.TEXTURE0); this.acc = g.target(f.w, f.h); }
+    if (f.blur && this.accOK && (!this.acc || this.acc.w !== f.w || this.acc.h !== f.h)) { if (this.acc) { gl.deleteTexture(this.acc.tex); gl.deleteFramebuffer(this.acc.fb); gl.deleteRenderbuffer(this.acc.rb); } gl.activeTexture(gl.TEXTURE0); this.acc = g.target(f.w, f.h); }
     const hand = f.hand, lan = f.lan;
     let jawM: M4 | null = null;
     if (lan) { const px = 0.030, py = -1.003; jawM = m4.mul(m4.translate(px, py, 0), m4.mul(m4.rotZ(-lan.jaw * 0.75), m4.translate(-px, -py, 0))); }   // spring gate swings inward
@@ -208,13 +201,9 @@ export class World {
       }
     }
     if (hand) {
-      const s = this.P.skin; this.common(s, f); s.m('uModel', wm); s.v3('uSkin', hand.skin); s.f('uWeight', 1); gl.uniformMatrix4fv(s.l('uBones'), false, this.bones); g.draw(this.handMesh);
+      const s = this.P.skin; this.common(s, f); s.m('uModel', wm); s.v3('uSkin', hand.skin); s.f('uWeight', 1); gl.uniformMatrix4fv(s.l('uBones'), false, this.bones); setHandUniforms(gl, s); g.draw(this.handMesh);
       const c = this.P.cloth; this.common(c, f); c.i('uMode', 2); c.v3('uTint', [0.035, 0.2, 0.095]); c.m('uModel', wm); c.v4('uHL', [0, 0, 0, 0]);
       gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, T.base); c.i('uBase', 0); g.draw(this.knitMesh);
-      // nails
-      const wl = skinMatrices(poseFor(hand.open, hand.relax, hand.flick), this.bones);
-      const m = this.P.metal; this.common(m, f); m.v3('uBase', [0.86, 0.60, 0.52]); m.f('uRough', 0.22); m.f('uMetal', 0);
-      for (const n of this.nails) { m.m('uModel', m4.mul(wm, m4.mul(wl[n.bone], n.M))); g.draw(this.nailMesh); }
     }
     // cards
     gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, T.front); gl.activeTexture(gl.TEXTURE1); gl.bindTexture(gl.TEXTURE_2D, T.back);
@@ -236,12 +225,16 @@ export class World {
     for (let i = 1; i < f.cards.length; i++) { const c = f.cards[i]; cp.m('uModel', c.M); cp.v2('uBend', c.bend[0], c.bend[1]); cp.f('uGlow', c.glow); cp.f('uWeight', 1); g.draw(this.cardMesh); }
     const acc = this.acc!;
     gl.bindFramebuffer(gl.FRAMEBUFFER, acc.fb); gl.viewport(0, 0, f.w, f.h);
-    gl.clearColor(0, 0, 0, 0); gl.clear(gl.COLOR_BUFFER_BIT); gl.disable(gl.DEPTH_TEST);
+    gl.clearColor(0, 0, 0, 0); gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+    // the hand is laid into the accumulation buffer's depth first, so fingers in front of the card stay in front of its blur
+    gl.disable(gl.BLEND); gl.disable(gl.CULL_FACE); gl.enable(gl.DEPTH_TEST); gl.depthFunc(gl.LEQUAL); gl.depthMask(true); gl.colorMask(false, false, false, false);
+    if (f.hand) { const s = this.D.skin; s.use(); s.m('uVP', this.vp); s.m('uModel', f.hand.M); gl.uniformMatrix4fv(s.l('uBones'), false, this.bones); g.draw(this.handMesh); }
+    gl.colorMask(true, true, true, true); gl.depthMask(false);
     gl.enable(gl.BLEND); gl.blendFunc(gl.ONE, gl.ONE); gl.enable(gl.CULL_FACE); gl.cullFace(gl.BACK);
     const c0 = f.cards[0], K = f.blur!.length; cp.use(); cp.f('uWeight', 1 / K); cp.v2('uBend', c0.bend[0], c0.bend[1]); cp.f('uGlow', c0.glow);
     for (const M of f.blur!) { cp.m('uModel', M); g.draw(this.cardMesh); }
-    gl.bindFramebuffer(gl.FRAMEBUFFER, null); gl.viewport(0, 0, f.w, f.h); gl.disable(gl.CULL_FACE);
-    gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null); gl.viewport(0, 0, f.w, f.h); gl.disable(gl.CULL_FACE); gl.disable(gl.DEPTH_TEST);
+    gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA); gl.depthMask(true);
     const cm = this.P.comp; cm.use(); cm.v2('uRes', f.w, f.h); gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, acc.tex); cm.i('uT', 0);
     gl.bindVertexArray(this.dummyVao); gl.drawArrays(gl.TRIANGLES, 0, 3); gl.disable(gl.BLEND); gl.enable(gl.DEPTH_TEST);
   }

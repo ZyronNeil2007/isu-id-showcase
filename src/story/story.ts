@@ -19,9 +19,9 @@ const T = (p: V3) => m4.translate(p[0], p[1], p[2]);
 const mulAll = (...ms: M4[]) => ms.reduce((a, b) => m4.mul(a, b));
 
 // ---------------------------------------------------------------- hand <-> card relationship (from the pinch solve)
-const yc: V3 = v3.norm([0.0232, 0.9079, 0.4185]), zc: V3 = v3.norm([0.0503, -0.4191, 0.9065]);
+const yc: V3 = v3.norm([-0.0018, 0.9998, 0.0219]), zc: V3 = v3.norm([-0.08, -0.022, 0.9966]);
 const xc: V3 = v3.norm(v3.cross(yc, zc));
-const cc: V3 = [0.3968, 1.0049, 0.5346];
+const cc: V3 = [0.4081, 1.1759, 0.5358];
 const CIH = new Float32Array([xc[0], xc[1], xc[2], 0, yc[0], yc[1], yc[2], 0, zc[0], zc[1], zc[2], 0, cc[0], cc[1], cc[2], 1]);
 const CIH_INV = m4.invert(CIH);
 export const CARD_H = 0.86, CARD_W = 0.54;
