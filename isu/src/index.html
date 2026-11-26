@@ -1,0 +1,220 @@
+<title>ISU Student ID</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Montserrat:wght@600;700;800&family=Roboto:wght@400;500;700&display=swap">
+<style>/*__CSS__*/</style>
+<a class="skip" href="#details">Skip to design details</a>
+
+<div id="loader" role="status" aria-live="polite">
+  <div class="ld-card" aria-hidden="true"></div>
+  <p>Preparing the card</p>
+  <div class="ld-bar" aria-hidden="true"><i id="ldBar"></i></div>
+</div>
+
+<!-- hero: pre-rendered frame sequence scrubbed by scroll (2D canvas, no WebGL). The static image shows if the frames cannot load or motion is reduced. -->
+<div id="seq" role="img" aria-label="A hand tosses the Isabela State University student ID, it spins, and clips onto the green lanyard"><div id="seqStatic"></div><canvas id="seqc"></canvas></div>
+<canvas id="gl" aria-hidden="true"></canvas>
+<svg id="lines" aria-hidden="true"><g id="ln-tour"><path class="lead" id="ln-lead"/><circle class="dot" id="ln-dot" r="4"/><circle class="ring" id="ln-ring" r="4"/></g>
+  <g id="ln-id"><polygon class="box" id="ln-box" pathLength="1"/><path class="lead" id="ln-idlead"/><g id="ln-ticks"></g></g></svg>
+
+<div id="hud" data-tone="light">
+  <header class="bar">
+    <a class="brand" href="#" data-go="top" aria-label="ISU Student ID, back to start"><img id="brandSeal" alt="" width="30" height="30"><span>ISU Student ID</span></a>
+    <nav aria-label="Sections">
+      <button type="button" data-go="reveal"><b>01</b><span>Reveal</span></button>
+      <button type="button" data-go="lanyard"><b>02</b><span>Lanyard</span></button>
+      <button type="button" data-go="identity"><b>03</b><span>Identity</span></button>
+      <button type="button" data-go="frontback"><b>04</b><span>Front &amp; back</span></button>
+      <button type="button" data-go="details"><b>05</b><span>Details</span></button>
+      <button type="button" data-go="final"><b>06</b><span>Finale</span></button>
+    </nav>
+  </header>
+
+  <!-- 01 beats: shown by scroll progress of the Reveal section -->
+  <div class="beats">
+    <div class="beat b-title" data-sec="reveal" data-a="0" data-b="0.15">
+      <p class="eyebrow">Isabela State University</p>
+      <h1>ISU Student&nbsp;ID</h1>
+      <p class="sub">A cinematic digital experience.</p>
+    </div>
+    <div class="beat b-side l" data-sec="reveal" data-a="0.285" data-b="0.385"><p class="eyebrow">The front</p><p class="big">Seal, photo, name.</p></div>
+    <div class="beat b-side r" data-sec="reveal" data-a="0.405" data-b="0.505"><p class="eyebrow">The back</p><p class="big">Contact, stickers, QR.</p></div>
+    <div class="beat b-side l" data-sec="reveal" data-a="0.545" data-b="0.665"><p class="eyebrow">Then the lanyard</p><p class="big">Green, woven, official.</p></div>
+    <div class="beat b-side r" data-sec="reveal" data-a="0.775" data-b="0.865"><p class="eyebrow">Lock</p><p class="big">Click.</p></div>
+    <div class="beat b-final" data-sec="reveal" data-a="0.9" data-b="1.01">
+      <p class="eyebrow">Student identification card</p>
+      <p class="big">Ready to wear.</p>
+    </div>
+  </div>
+  <div class="cue" id="cue" aria-hidden="true"><span>Scroll</span><i></i></div>
+
+  <!-- 02 lanyard tour callouts -->
+  <div class="callouts" id="callouts">
+    <article class="callout" data-stop="0"><span class="n">01</span><h3>The strap</h3><p>Flat woven webbing, 20&nbsp;mm wide. It shades from deep teal at the buckle end to leaf green at the neck, with a fine twill weave and finished edges.</p></article>
+    <article class="callout wide" data-stop="1"><span class="n">02</span><h3>Core values</h3>
+      <p class="words" id="valWords"><span>People</span><span>Nature</span><span>Entrepreneurship</span><span>Innovation</span></p>
+      <p>Printed along the strap in gold capitals, separated by thin vertical bars. Each word lights up in turn.</p></article>
+    <article class="callout" data-stop="2"><span class="n">03</span><h3>The flame</h3><p>The flame mark, drawn from the supplied artwork in its yellow&#8209;to&#8209;orange&#8209;to&#8209;red gradient.</p></article>
+    <article class="callout" data-stop="3"><span class="n">04</span><h3>Ornament</h3><p>A white decorative band of leaves, scrollwork and a knotted centre, mirrored on either side.</p></article>
+    <article class="callout" data-stop="4"><span class="n">05</span><h3>University seal</h3><p>The Isabela State University seal, 1978, printed in full colour at the centre of the strap.</p></article>
+    <article class="callout wide" data-stop="5"><span class="n">06</span><h3>Wordmark</h3><p>&ldquo;Isabela State University&rdquo; in gold serif capitals runs along the second strand.</p></article>
+    <article class="callout" data-stop="6"><span class="n">07</span><h3>Side-release buckle</h3><p>A black two-part buckle joins the strap to the green end-piece. Squeeze both side prongs to release it, and the lanyard breaks away safely. Hardware shown is an illustrative model; the supplied SVG defines only the fabric.</p></article>
+    <article class="callout" data-stop="7"><span class="n">08</span><h3>Swivel lobster clasp</h3><p>A silver lobster clasp on a swivel eye. Press the spring gate to open it, so the ID never twists the strap. It holds the split ring of the clear badge holder.</p></article>
+  </div>
+  <div class="tourbar" id="tourbar" aria-hidden="true"><b id="tbN">01</b><span id="tbT">The strap</span><i><u id="tbP"></u></i></div>
+
+  <!-- 03 identity breakdown -->
+  <aside class="idpanel" id="idpanel" aria-live="polite">
+    <p class="eyebrow"><span id="idSide">Front</span> <em id="idCount">1 / 12</em></p>
+    <h2 id="idTitle">University branding</h2>
+    <p id="idBody"></p>
+    <div class="idsteps" id="idSteps"></div>
+  </aside>
+
+  <!-- 04 front & back labels + editor -->
+  <div class="fbl" id="fbA"><span>Front</span></div>
+  <div class="fbl" id="fbB"><span>Back</span></div>
+  <div class="fbhint" id="fbHint">Move the pointer to tilt the cards.</div>
+  <aside class="editor" id="editor" aria-label="Edit placeholder text">
+    <header><h2>Make it yours</h2><button type="button" id="edToggle" aria-expanded="true" aria-controls="edBody">Hide</button></header>
+    <div id="edBody">
+      <p class="note">Every placeholder on the card is editable. Changes are drawn onto the 3D card live.</p>
+      <label>Student name<input id="f-name" maxlength="40" autocomplete="off" placeholder="STUDENT NAME"></label>
+      <label>Student number<input id="f-number" maxlength="16" autocomplete="off" placeholder="20-2002"></label>
+      <label>College / designation<textarea id="f-college" rows="2" maxlength="120" placeholder="COLLEGE OF COMPUTING STUDIES, INFORMATION AND COMMUNICATION TECHNOLOGY"></textarea></label>
+      <div class="two"><label>Contact person<input id="f-contact" maxlength="30" autocomplete="off" placeholder="NAME"></label>
+      <label>Contact no.<input id="f-contactNo" maxlength="20" autocomplete="off" placeholder="CONTACT"></label></div>
+      <label>Address<input id="f-address" maxlength="34" autocomplete="off" placeholder="ADDRESS"></label>
+      <label>Birth date<input id="f-birth" maxlength="12" autocomplete="off" placeholder="MM/DD/YYYY"></label>
+      <div class="row"><label class="file">Photo<input id="f-photo" type="file" accept="image/*"></label><button type="button" id="edReset">Reset</button></div>
+    </div>
+  </aside>
+</div>
+
+<main id="story">
+  <section id="reveal" class="scene" aria-labelledby="h-reveal"><h2 class="sr" id="h-reveal">01 Reveal: a hand tosses the ID card, it spins, and slides into the clear holder on the lanyard.</h2></section>
+  <section id="lanyard" class="scene" aria-labelledby="h-lanyard"><h2 class="sr" id="h-lanyard">02 Lanyard tour: strap, values, flame, ornament, seal, wordmark, side-release buckle and swivel lobster clasp.</h2></section>
+  <section id="identity" class="scene" aria-labelledby="h-identity"><h2 class="sr" id="h-identity">03 Identity: the card detaches and each component is highlighted.</h2></section>
+  <section id="frontback" class="scene" aria-labelledby="h-fb"><h2 class="sr" id="h-fb">04 Front and back of the card.</h2></section>
+
+  <section id="details" class="sheet" aria-labelledby="h-details">
+    <div class="wrap">
+      <p class="eyebrow">05 &mdash; Design details</p>
+      <h2 id="h-details">The card as supplied. The site in ISU identity.</h2>
+      <p class="lede">The card is a CR80 portrait (53.98 &times; 85.60&nbsp;mm) laid out on an 816 &times; 1296&nbsp;px grid. The lanyard is a 900&nbsp;&times;&nbsp;20&nbsp;mm printed strip. The card and lanyard artwork is untouched; this page&rsquo;s own colours and type follow the <i>ISU Corporate Visual Identity Manual</i> (2026&nbsp;edition).</p>
+
+      <div class="grid">
+        <article class="panel wide" id="pal">
+          <h3>Institutional colour &middot; ISU manual</h3>
+          <div class="sw4">
+            <div style="--c:#006439"><i></i><b>ISU Green</b><code>#006439 &middot; 18-6026 TCX</code><span>Primary. Nature and life; the agricultural and forestry roots of Cagayan Valley.</span></div>
+            <div style="--c:#F7D000"><i></i><b>ISU Yellow</b><code>#F7D000 &middot; 14-0756 TCX</code><span>Primary. Hope and illumination to the People; the golden harvest of potential.</span></div>
+            <div style="--c:#CD202B"><i></i><b>ISU Red</b><code>#CD202B &middot; 18-1662 TCX</code><span>Complementary. The passion and fire of Entrepreneurship.</span></div>
+            <div style="--c:#23305B"><i></i><b>ISU Blue</b><code>#23305B &middot; 19-3943 TCX</code><span>Complementary. Integrity and truth through Education and Innovation.</span></div>
+          </div>
+          <h4>As printed in the supplied card and lanyard files</h4>
+          <div class="swatches" style="grid-template-columns:repeat(4,minmax(0,1fr))">
+            <div style="--c:#0a6a35"><i></i><b>Template green</b><code>#0A6A35</code><span>Header, frame, text</span></div>
+            <div style="--c:#14442a"><i></i><b>Template deep green</b><code>#14442A</code><span>Captions</span></div>
+            <div style="--c:#f2c500"><i></i><b>Template gold</b><code>#F2C500</code><span>Rules and bands</span></div>
+            <div style="--c:#ffffff"><i></i><b>White</b><code>#FFFFFF</code><span>Card stock</span></div>
+          </div>
+          <h4>Lanyard strip</h4>
+          <div class="ramp strip" aria-label="Strap gradient from #194853 through #4CAA50 to #266253"></div>
+          <div class="ramp-l"><code>#194853</code><code>#4CAA50</code><code>#266253</code></div>
+          <div class="ramp-pair"><div><div class="ramp gold"></div><code>#FFD92E &rarr; #F0B800</code><span>Wordmark &amp; values</span></div>
+          <div><div class="ramp flame"></div><code>#FFEC00 &rarr; #FF9A00 &rarr; #FF0000</code><span>Flame</span></div></div>
+          <p class="note"><b>Template vs manual.</b> The supplied artwork uses a slightly different green and gold than the manual&rsquo;s official HEX values. Both are shown as they are. The artwork was not recoloured; reconcile it with the Strategic Communications Office before print.</p>
+        </article>
+
+        <article class="panel wide" id="typ">
+          <h3>Typography</h3>
+          <div class="typgrid">
+            <div>
+              <h4 style="margin-top:0">Site &middot; ISU manual, digital</h4>
+              <div class="spec"><span class="tag">Montserrat Bold &middot; headers</span><p style="font:700 30px/1.1 var(--head)">One card. Four values.</p><small>Headings and titles across this page</small></div>
+              <div class="spec"><span class="tag">Poppins &middot; long-form text</span><p style="font:400 16px/1.5 Poppins,sans-serif">Body copy and captions in the story.</p><small>Also the card&rsquo;s own typeface</small></div>
+              <div class="spec"><span class="tag">Roboto &middot; captions and system text</span><p style="font:500 14px/1.4 var(--cap);letter-spacing:.06em">METADATA &middot; LABELS &middot; CODES</p><small>Navigation, eyebrows, specs</small></div>
+            </div>
+            <div>
+              <h4 style="margin-top:0">Card &middot; as supplied</h4>
+              <div class="spec"><span class="tag">Poppins 700</span><p class="t700">STUDENT NAME</p><small>41&nbsp;px &middot; name and student number</small></div>
+              <div class="spec"><span class="tag">Poppins 600</span><p class="t600">Republic of the Philippines</p><small>24&nbsp;px &middot; headings &middot; 32&nbsp;px college line</small></div>
+              <div class="spec"><span class="tag">Poppins 400</span><p class="t400">STUDENT NUMBER</p><small>18&ndash;21&nbsp;px &middot; captions and labels</small></div>
+              <div class="spec serif"><span class="tag">Wordmark</span><img id="dWord" alt="Isabela State University wordmark"><small>Supplied artwork &middot; gold serif capitals</small></div>
+            </div>
+          </div>
+          <p class="fine" style="margin-top:16px">The manual reserves Arial Bold for seal text, Baskervville Bold for the logotype and Helvetica for the mantra. Those are identity artwork, so none is typeset here.</p>
+        </article>
+
+        <article class="panel wide" id="prop">
+          <h3>Proportions</h3>
+          <div class="cards">
+            <figure><div class="mini" id="mFront"><canvas width="408" height="648"></canvas></div><figcaption>Front &middot; 816 &times; 1296 px</figcaption></figure>
+            <figure><div class="mini" id="mBack"><canvas width="408" height="648"></canvas></div><figcaption>Back &middot; 816 &times; 1296 px</figcaption></figure>
+            <div class="facts">
+              <dl>
+                <div><dt>Format</dt><dd>CR80 &middot; 53.98 &times; 85.60 mm</dd></div>
+                <div><dt>Corner radius</dt><dd>3.18 mm</dd></div>
+                <div><dt>Header band</dt><dd>42 px green + 7 px gold</dd></div>
+                <div><dt>Photo frame</dt><dd>453 px square &middot; 6 px border &middot; 28 px radius</dd></div>
+                <div><dt>Footer bands</dt><dd>8 px gold + 40 px green</dd></div>
+                <div><dt>Lanyard strip</dt><dd>900 &times; 20 mm</dd></div>
+                <div><dt>Values text</dt><dd>PEOPLE | NATURE | ENTREPRENEURSHIP | INNOVATION</dd></div>
+              </dl>
+            </div>
+          </div>
+        </article>
+
+        <article class="panel wide" id="brand">
+          <h3>Branding</h3>
+          <div class="marks">
+            <figure><img id="dSeal" alt="ISU seal"><figcaption>Seal</figcaption></figure>
+            <figure class="wm"><img id="dWord2" alt="Isabela State University"><figcaption>Wordmark</figcaption></figure>
+            <figure><img id="dFlame" alt="ISU flame"><figcaption>Flame</figcaption></figure>
+            <figure class="orn"><img id="dOrn" alt="Ornament band"><figcaption>Ornament</figcaption></figure>
+          </div>
+          <ul class="rules">
+            <li>The seal appears only in its supplied full-colour form: never stretched, cropped, recoloured, outlined, glowed, shadowed, used as a watermark or placed over a photograph.</li>
+            <li>The Torch, Circle Rays, Gear and Weave Rope are never separated or removed. Nothing on this page is highlighted by lighting the seal.</li>
+            <li>Core values on the strap &mdash; People, Nature, Entrepreneurship, Innovation &mdash; carry the manual&rsquo;s colour meanings in the tour: Yellow for People, Green for Nature, Red for Entrepreneurship, Blue for Innovation.</li>
+          </ul>
+          <p class="note"><b>Verify before official use.</b> The seal in the supplied files reads &ldquo;1978&rdquo;. The 2026 manual introduces a new official seal (BOR Resolution No.&nbsp;114 s.&nbsp;2025). Swap in the master files from the University Strategic Communications Office. Hardware and the badge holder are an illustrative model, not an ISU specification.</p>
+        </article>
+      </div>
+      <p class="fine">Template note: the supplied front reads &ldquo;Cabagan, Isabela&rdquo; while the back certifies &ldquo;Echague Campus&rdquo;. Both are shown exactly as supplied. Photo, name, student number, college and contact lines are placeholders.</p>
+    </div>
+  </section>
+
+  <section id="final" class="scene" aria-labelledby="h-final"><h2 class="sr" id="h-final">06 Final presentation.</h2></section>
+</main>
+
+<div id="hud2" data-tone="dark">
+  <div class="finale" id="finale">
+    <p class="eyebrow">Isabela State University</p>
+    <h2>One card. Four values.</h2>
+    <p class="stmt"><span>People.</span> <span>Nature.</span> <span>Entrepreneurship.</span> <span>Innovation.</span></p>
+    <p class="sub">Green, yellow and a flame &mdash; carried on a single student ID, exactly as supplied.</p>
+    <button type="button" class="cta" data-go="top">Watch again <span aria-hidden="true">&#8593;</span></button>
+  </div>
+</div>
+
+<footer id="foot">
+  <div class="wrap">
+    <div class="fl"><img id="footSeal" alt="" width="36" height="36"><div><b>ISU Student ID</b><span class="mantra">One ISU &middot; ISUlong</span></div></div>
+    <p>Designed from the supplied CR80 card template and editable lanyard artwork. Page colours and type follow the ISU Corporate Visual Identity Manual, 2026 edition (Office of the Vice President for Planning and Development). The Isabela State University names, seal, wordmark and flame belong to the university; this is an unofficial design showcase.</p>
+    <p class="fine">Rendered live with a custom WebGL2 engine. The hand, badge holder, buckle and lobster clasp are procedural illustrations. Student details are placeholders.</p>
+  </div>
+</footer>
+
+<div id="fallback" hidden>
+  <div class="wrap">
+    <p class="eyebrow">Isabela State University</p>
+    <h1>ISU Student ID</h1>
+    <p class="lede">3D is not available in this browser, so here is the card and lanyard as flat artwork. The full experience needs WebGL&nbsp;2.</p>
+    <div class="fbcards"><figure><canvas id="fbFront"></canvas><figcaption>Front</figcaption></figure><figure><canvas id="fbBack"></canvas><figcaption>Back</figcaption></figure></div>
+    <div class="fbmarks"><img id="fbSeal" alt="ISU seal"><img id="fbWord" alt="Isabela State University"><img id="fbFlame" alt="ISU flame"></div>
+  </div>
+</div>
+
+<script>/*__JS__*/</script>
