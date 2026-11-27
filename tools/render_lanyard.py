@@ -13,12 +13,13 @@ LAYERS=[
  ('ornament', '#ornament-left',(372,10,66,20), 32),
  ('seal',     '#seal-center', (451,11,18,18), 40),
  ('wordmark', '#university-name',(618,11,239,18), 20),
- ('clip',     'CLIP', (10,50,50,20), 24),
+ ('clip',     'CLIP', (105,85,20,50), 24),   # end-piece, 20 x 50 mm, upright (as in the updated template)
 ]
 async def main():
     async with async_playwright() as p:
         b=await p.chromium.launch()
         for name,sel,(x,y,w,h),k in LAYERS:
+            if len(sys.argv)>1 and name not in sys.argv[1:]: continue
             W,H=round(w*k),round(h*k)
             t=re.sub(r'viewBox="0 0 920 190" width="920mm" height="190mm"',f'viewBox="{x} {y} {w} {h}" width="{W}" height="{H}"',svg,1)
             if sel=='CLIP':

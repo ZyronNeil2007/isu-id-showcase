@@ -21,15 +21,17 @@ const mulAll = (...ms: M4[]) => ms.reduce((a, b) => m4.mul(a, b));
 // ---------------------------------------------------------------- hand <-> card relationship (from the pinch solve)
 const yc: V3 = v3.norm([-0.0018, 0.9998, 0.0219]), zc: V3 = v3.norm([-0.08, -0.022, 0.9966]);
 const xc: V3 = v3.norm(v3.cross(yc, zc));
-const cc: V3 = [0.4081, 1.1759, 0.5358];
+const cc0: V3 = [0.4081, 1.1759, 0.5358];
+// the card is carried 25 mm further along the fingers, so the finger pads sit just inside its lower edge and the digit wraps round the edge instead of reaching through the face
+const cc: V3 = v3.add(cc0, v3.mul(yc, 0.25)) as V3;
 const CIH = new Float32Array([xc[0], xc[1], xc[2], 0, yc[0], yc[1], yc[2], 0, zc[0], zc[1], zc[2], 0, cc[0], cc[1], cc[2], 1]);
-const CIH_INV = m4.invert(CIH);
+export const CIH_INV = m4.invert(CIH);
 export const CARD_H = 0.86, CARD_W = 0.54;
 const SKIN: V3 = [0.46, 0.265, 0.175];
 
 // ---------------------------------------------------------------- hardware / holder geometry (lanyard space, +y up)
-const HANG_Y = 1.0;                       // lanyard origin (where the strands meet) when hanging
-const RING_Y = -1.31;                     // split ring centre
+const HANG_Y = 0.725;                       // lanyard origin (where the strands meet) when hanging
+const RING_Y = -1.035;                     // split ring centre
 const CARD_BELOW = 0.50;                  // card centre sits this far below the ring when seated
 const SLIDE_OUT = 0.95;                   // how far the card is pulled out of the holder (downwards) to be free
 const HANG_POS: V3 = [0, HANG_Y, 0];
@@ -65,6 +67,24 @@ const cardMatrix = (pose: { pos: V3; quat: Q4 }) => m4.fromTRS(pose.pos, pose.qu
 // lanyard descent + swing
 const lanY = curve([[0.50, 5.2], [0.56, 4.2, -9], [0.66, 2.2, -9], [0.72, 1.15, -3.2], [0.745, HANG_Y, 2], [0.77, HANG_Y, 0], [1, HANG_Y, 0]]);
 const swing = (t: number, amp: number) => amp * Math.exp(-t * 3.1) * Math.sin(t * 8.4);
+
+
+// ---------------------------------------------------------------- the hand (baked offline): where it is and how its fingers are posed at reveal progress p
+export interface HandState { M: M4; open: number; relax: number; flick: number; skin: V3; contact?: boolean; }
+export const handFromCard = (pp: number) => m4.mul(cardMatrix(heroCardPose(pp)), CIH_INV);
+const OPEN_A = +((globalThis as any).OPEN_A ?? 0.292), OPEN_B = +((globalThis as any).OPEN_B ?? 0.34);   // fingers open only after the card has risen clear of them
+export function handAt(p: number): HandState | null {
+  if (p > 0.64) return null;
+  let M: M4;
+  if (p <= P_REL) M = handFromCard(p);
+  else {
+    const base = handFromCard(P_REL);
+    // the hand stays put (it does not chase the card) so the card leaves the pinch upward, then the hand drops away below it
+    const dx = curve([[P_REL, 0], [0.32, 0.03], [0.45, 0.5], [0.55, 1.0]])(p), dy = curve([[P_REL, 0], [0.30, -0.03], [0.34, -0.1], [0.42, -0.7, -9], [0.52, -2.2, -9], [0.6, -3.4]])(p), dz = curve([[P_REL, 0], [0.4, 0.12], [0.55, 0.22]])(p);
+    M = m4.mul(T([dx, dy, dz]), base);
+  }
+  return { M, open: smooth(OPEN_A, OPEN_B, p), relax: smooth(0.34, 0.48, p), flick: -Math.exp(-Math.pow((p - 0.235) / 0.025, 2)), skin: SKIN, contact: true };
+}
 
 export interface HudState {
   p: { reveal: number; lanyard: number; identity: number; frontback: number; final: number };
@@ -140,17 +160,7 @@ export class Story {
     if (cur === 'reveal') {
       const p = pr.reveal; hud.pLocal = p;
       let cardM = cardMatrix(heroCardPose(p));
-      const inHand = p <= P_REL;
-      // hand follows the card until release, then continues on its own path
-      const handFromCard = (pp: number) => m4.mul(cardMatrix(heroCardPose(pp)), CIH_INV);
-      let handM: M4;
-      if (inHand) handM = handFromCard(p);
-      else {
-        const base = handFromCard(P_REL);
-        const dx = curve([[P_REL, 0], [P_REL + 0.05, 0.12], [0.36, 0.3], [0.45, 0.65], [0.55, 1.15]])(p), dy = curve([[P_REL, 0], [P_REL + 0.05, 0.42], [0.34, 0.5, -1], [0.42, -0.5, -9], [0.52, -2.2, -9], [0.6, -3.4]])(p), dz = curve([[P_REL, 0], [0.4, 0.35], [0.55, 0.5]])(p);
-        handM = m4.mul(T([dx, dy, dz]), base);
-      }
-      frame.hand = { M: handM, open: smooth(0.24, 0.29, p), relax: smooth(0.31, 0.46, p), flick: -Math.exp(-Math.pow((p - 0.235) / 0.025, 2)), skin: SKIN };
+      frame.hand = handAt(p);
       if (p > 0.64) frame.hand = null;
       // lanyard assembly arrives from above with the clear holder hanging empty
       if (p > 0.49) {
@@ -172,7 +182,7 @@ export class Story {
       const speed = v3.len(v3.sub(heroCardPose(p).pos, heroCardPose(Math.max(0, p - 0.004)).pos)) / 0.004;
       const qa = heroCardPose(p).quat, qb = heroCardPose(Math.max(0, p - 0.004)).quat;
       const om = 2 * Math.acos(clamp(Math.abs(qa[0] * qb[0] + qa[1] * qb[1] + qa[2] * qb[2] + qa[3] * qb[3]), 0, 1)) / 0.004;
-      if (!reduced && p < 0.69 && (speed > 1.0 || om > 2.5)) {
+      if (!reduced && p < 0.69 && p > 0.3 && (speed > 1.0 || om > 2.5)) {   // never while the fingers are on the card: it stays a crisp, solid object
         const Texp = Math.min(0.011, 0.06 / Math.max(speed, 1e-3), 0.22 / Math.max(om, 1e-3)), K = 12, ms: M4[] = [];
         for (let i = 0; i < K; i++) ms.push(cardMatrix(heroCardPose(clamp(p - Texp * (i / (K - 1)) + Texp * 0.5, 0, 1))));
         frame.blur = ms;

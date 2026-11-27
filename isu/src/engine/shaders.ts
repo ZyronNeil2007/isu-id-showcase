@@ -178,8 +178,8 @@ void main(){
       alb = c.rgb;
     } else alb = texture(uBase, vec2(s / 900.0, 0.5)).rgb * 0.55;
   } else if (uMode == 1){
-    mmx = vUV.y * 50.0; mmy = vUV.x * 20.0;
-    if (vK < 0.5) alb = texture(uBase, vec2(1.0 - vUV.y, vUV.x)).rgb; else alb = vec3(0.045, 0.2, 0.1);
+    mmx = vUV.y * 40.0; mmy = vUV.x * 20.0;
+    if (vK < 0.5) alb = texture(uBase, vec2(vUV.x, 0.1 + 0.8 * vUV.y)).rgb; else alb = vec3(0.045, 0.2, 0.1);   // face = the middle 40 mm of the 50 mm artwork (seal stays centred)
   } else { alb = uTint; mmx = vUV.x * 60.0; mmy = vUV.y * 60.0; sc = 4.0; }
   // woven micro-structure (fades out when finer than a pixel)
   float aa = 1.0 - smoothstep(0.05 * sc, 0.16 * sc, fwidth(mmx) + fwidth(mmy));

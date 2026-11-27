@@ -1,5 +1,5 @@
 import numpy as np, base64, json
-d=np.load('skin.npz'); V=d['V']; F=d['F']; N=d['N']; idx=d['idx']; ww=d['ww']; ao=d['ao']; th=np.load('th.npy')
+d=np.load('skin2.npz'); V=d['V']; F=d['F']; N=d['N']; idx=d['idx']; ww=d['ww']; ao=d['ao']; th=np.load('th2.npy')
 Jh=np.load('Jh.npy',allow_pickle=True).item()
 nv=len(V)
 bmin=V.min(0)-1e-4; bmax=V.max(0)+1e-4
@@ -34,5 +34,5 @@ json.dump(RIG,open('rig.json','w'))
 js=lambda o: json.dumps(o,separators=(',',':'))
 src="// Generated from the supplied Hand.obj (mirrored to a right hand, forearm straightened and cropped, 75k vertices). Do not edit.\n"
 src+="export const HAND = "+js(HAND)+" as const;\nexport const RIG = "+js(RIG)+" as const;\n"
-open('/home/claude/isu/src/scene/hand.generated.ts','w').write(src)
+open('/home/claude/isu-bake/src/scene/hand.generated.ts','w').write(src)
 print('written',len(src)/1e6,'MB')

@@ -10,10 +10,10 @@ const $ = <T extends HTMLElement = HTMLElement>(id: string) => document.getEleme
 const WORDS: [number, number][] = [[62.5, 95.2], [107.9, 141.2], [153.9, 244.4], [257, 311.4]];
 const TITLES = ['The strap', 'Core values', 'The flame', 'Ornament', 'University seal', 'Wordmark', 'Side-release buckle', 'Swivel lobster clasp'];
 const ANCHOR_S = [70, 187, 332, 395, 450, 728];   // strap point each callout points at (mm along the strip)
-const HW_ANCHOR: Record<number, V3> = { 6: [0.0, -0.22, 0.05], 7: [0.0, -1.08, 0.05] };   // hardware stops: fixed points in lanyard space
+const HW_ANCHOR: Record<number, V3> = { 6: [0.0, -0.16, 0.05], 7: [0.0, -0.90, 0.05] };   // hardware stops: fixed points in lanyard space
 
 export class Hud {
-  root = $('hud'); root2 = $('hud2'); lines = document.getElementById('lines') as unknown as SVGSVGElement;
+  world!: World; root = $('hud'); root2 = $('hud2'); lines = document.getElementById('lines') as unknown as SVGSVGElement;
   beats = [...document.querySelectorAll<HTMLElement>('.beat')];
   callouts = [...document.querySelectorAll<HTMLElement>('.callout')];
   navBtns = [...document.querySelectorAll<HTMLElement>('.bar nav button')];
@@ -27,9 +27,16 @@ export class Hud {
   tone = 'light'; curItem = -2; curStop = -9; stopSince = 0; itemSince = 0; shownItem = -2; swapTimer = 0; curSec = ''; hot = -2; side = -1;
   sheetOff = false;
 
-  constructor(public world: World) {
+  constructor() {
     for (let i = 0; i < 4; i++) { const p = document.createElementNS('http://www.w3.org/2000/svg', 'path'); p.setAttribute('class', 'tick'); this.ticks.appendChild(p); this.tickEls.push(p); }
     for (let i = 0; i < ITEMS.length; i++) this.idSteps.appendChild(document.createElement('i'));
+  }
+
+  /** hero beats (no 3D): same caption windows as before, driven by scroll progress only; also clears every other section's overlay */
+  updateHero(p: number) {
+    const h: HudState = { p: { reveal: p, lanyard: 0, identity: 0, frontback: 0, final: 0 }, section: 'reveal', stop: -1, stopT: 0, item: -1, itemT: 0, cardM: m4.ident(), cardM2: null, lanM: null, jaw: 0, showEdit: 0, flipB: 0, words: -1, path: null as unknown as HudState['path'], hold: 0, pLocal: p };
+    this.setSheetCover(false);
+    this.update(h, null as unknown as Frame, innerWidth, innerHeight, 0, 0);
   }
 
   setSheetCover(off: boolean) { if (off !== this.sheetOff) { this.sheetOff = off; this.root.classList.toggle('off', off); this.lines.style.display = off ? 'none' : ''; } }

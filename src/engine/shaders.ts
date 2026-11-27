@@ -178,8 +178,8 @@ void main(){
       alb = c.rgb;
     } else alb = texture(uBase, vec2(s / 900.0, 0.5)).rgb * 0.55;
   } else if (uMode == 1){
-    mmx = vUV.y * 50.0; mmy = vUV.x * 20.0;
-    if (vK < 0.5) alb = texture(uBase, vec2(1.0 - vUV.y, vUV.x)).rgb; else alb = vec3(0.045, 0.2, 0.1);
+    mmx = vUV.y * 40.0; mmy = vUV.x * 20.0;
+    if (vK < 0.5) alb = texture(uBase, vec2(vUV.x, 0.1 + 0.8 * vUV.y)).rgb; else alb = vec3(0.045, 0.2, 0.1);   // face = the middle 40 mm of the 50 mm artwork (seal stays centred)
   } else { alb = uTint; mmx = vUV.x * 60.0; mmy = vUV.y * 60.0; sc = 4.0; }
   // woven micro-structure (fades out when finer than a pixel)
   float aa = 1.0 - smoothstep(0.05 * sc, 0.16 * sc, fwidth(mmx) + fwidth(mmy));
@@ -225,95 +225,6 @@ void main(){
   vec3 spec = envColor(R, uRough + brush) * envBRDF(F0, uRough, NoV) * mix(0.55 + 0.45 * sh, 1.0, 0.4);
   vec3 diff = uBase * (1.0 - uMetal) * (irradiance(N) + keyColor() * max(dot(N, L), 0.0) * sh);
   o = vec4(finish(diff + spec), 1.0);
-}`;
-
-// ---------------------------------------------------------------- skin
-export const SKIN_VS = V + `
-layout(location=0) in vec3 aPos; layout(location=1) in vec3 aNor; layout(location=3) in vec4 aJ; layout(location=4) in vec4 aW; layout(location=5) in float aAO; layout(location=6) in float aTh;
-uniform mat4 uModel, uVP; uniform mat4 uBones[24]; out vec3 vW; out vec3 vN; out float vAO; out float vTh; out vec3 vRest; out vec3 vNr;
-void main(){
-  mat4 sk = aW.x * uBones[int(aJ.x)] + aW.y * uBones[int(aJ.y)] + aW.z * uBones[int(aJ.z)] + aW.w * uBones[int(aJ.w)];
-  vec4 w = uModel * (sk * vec4(aPos, 1.0)); vW = w.xyz; vN = mat3(uModel) * (mat3(sk) * aNor); vAO = aAO; vTh = aTh; vRest = aPos; vNr = aNor; gl_Position = uVP * w;
-}`;
-// Skin: the supplied sculpt carries its own wrinkles, veins and creases in the normals; the shader adds tone, nails, subsurface scatter and gloss.
-// Nails and tone are evaluated in rest-pose hand space (vRest) against the rig's bone frames, so they ride on the skin like a texture.
-export const SKIN_FS = V + P + COMMON + `
-in vec3 vW; in vec3 vN; in float vAO; in float vTh; in vec3 vRest; in vec3 vNr; out vec4 o; uniform vec3 uSkin; uniform float uWeight;
-uniform vec4 uBA[16]; uniform vec4 uBX[16]; uniform vec4 uBP[16]; uniform vec4 uBD[16];   // per bone (rest): origin+length, axis+radius, flexion (pad-side) dir, nail-side dir
-float vnoise(vec3 p){ vec3 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f);
-  return mix(mix(mix(hash12(i.xy + i.z * 17.0), hash12(i.xy + vec2(1, 0) + i.z * 17.0), f.x), mix(hash12(i.xy + vec2(0, 1) + i.z * 17.0), hash12(i.xy + vec2(1, 1) + i.z * 17.0), f.x), f.y),
-             mix(mix(hash12(i.xy + (i.z + 1.0) * 17.0), hash12(i.xy + vec2(1, 0) + (i.z + 1.0) * 17.0), f.x), mix(hash12(i.xy + vec2(0, 1) + (i.z + 1.0) * 17.0), hash12(i.xy + vec2(1, 1) + (i.z + 1.0) * 17.0), f.x), f.y), f.z); }
-float gNail, gLun, gFree, gFold, gTip, gSide, gFing, gKn;
-void bonesDetail(vec3 pr, vec3 nr){
-  gNail = 0.0; gLun = 0.0; gFree = 0.0; gFold = 0.0; gTip = 0.0; gSide = 0.0; gFing = 0.0; gKn = 0.0;
-  float best = 0.0;
-  for (int i = 1; i < 16; i++){
-    vec4 A = uBA[i], X = uBX[i]; vec3 ax = X.xyz, pal = uBP[i].xyz, dor = uBD[i].xyz; float len = A.w, r = X.w;
-    vec3 rel = pr - A.xyz; float s = dot(rel, ax); vec3 rv = rel - ax * s; float rad = length(rv);
-    float inB = (1.0 - smoothstep(r * 1.5, r * 2.2, rad)) * smoothstep(-0.05, -0.01, s) * (1.0 - smoothstep(len + 0.02, len + 0.08, s));
-    if (inB < 0.002) continue;
-    gFing = max(gFing, inB);
-    float side = dot(nr, pal);
-    if (inB > best) { best = inB; gSide = side; }
-    gKn = max(gKn, inB * (1.0 - smoothstep(0.0, 0.07, abs(s))) * smoothstep(0.0, 0.5, -side));
-    if (i % 3 == 0){
-      float dd = dot(nr, dor); float lwn = dot(rv, cross(ax, dor));
-      float wN = 0.70 * r, sB = 0.36 * len, sE = 0.97 * len, cs = (sB + sE) * 0.5, hl = (sE - sB) * 0.5;
-      float e = pow(abs(lwn) / wN, 3.0) + pow(abs((s - cs) / hl), 4.0);
-      float m = (1.0 - smoothstep(0.80, 1.0, e)) * smoothstep(0.25, 0.60, dd) * inB;
-      float u = (s - sB) / (sE - sB);
-      gNail = max(gNail, m);
-      gLun = max(gLun, m * (1.0 - smoothstep(0.08, 0.30, u)) * (1.0 - smoothstep(0.5, 0.95, abs(lwn) / wN)));
-      gFree = max(gFree, m * smoothstep(0.82, 0.95, u));
-      gFold = max(gFold, (smoothstep(0.78, 0.97, e) - smoothstep(0.97, 1.14, e)) * smoothstep(0.25, 0.6, dd) * inB);
-      gTip = max(gTip, smoothstep(0.3, 0.95, s / len) * smoothstep(0.1, 0.5, side) * inB);
-    }
-  }
-}
-vec3 bumpN(vec3 N, vec3 p, float h){
-  vec3 sx = dFdx(p), sy = dFdy(p), r1 = cross(sy, N), r2 = cross(N, sx);
-  float det = dot(sx, r1); vec3 g = sign(det) * (dFdx(h) * r1 + dFdy(h) * r2);
-  return normalize(abs(det) * N - g);
-}
-void main(){
-  vec3 Ng = normalize(vN); vec3 V = normalize(uCam - vW); vec3 L = normalize(uKeyDir);
-  vec3 pr = vRest, nr = normalize(vNr);
-  bonesDetail(pr, nr);
-  // albedo
-  vec3 alb = uSkin;
-  float mott = vnoise(pr * 18.0) - 0.5, mott2 = vnoise(pr * 70.0 + 4.0) - 0.5;
-  alb *= 1.0 + mott * 0.14 + mott2 * 0.07;
-  float palmness = smoothstep(-0.2, 0.6, gSide);
-  alb *= mix(vec3(0.93, 0.90, 0.86), vec3(1.10, 1.02, 0.96), palmness);
-  alb *= mix(vec3(1.0), vec3(1.09, 0.82, 0.74), clamp(gTip * 0.50 + gKn * 0.45, 0.0, 1.0));
-  alb *= mix(vec3(1.0), vec3(1.06, 0.84, 0.78), smoothstep(0.45, 1.0, 1.0 - vAO) * 0.7);
-  vec3 nailC = mix(vec3(0.70, 0.40, 0.36), vec3(0.86, 0.80, 0.76), gFree); nailC = mix(nailC, vec3(0.82, 0.68, 0.64), gLun * 0.75);
-  alb *= 1.0 - gFold * 0.20 * vec3(0.5, 1.0, 1.0);
-  alb = mix(alb, nailC, gNail);
-  // micro relief (fades out when it is finer than a pixel)
-  float fw = fwidth(pr.x) + fwidth(pr.y) + fwidth(pr.z);
-  float fine = (vnoise(pr * 420.0) - 0.5) * (1.0 - smoothstep(0.004, 0.012, fw));
-  float h = fine * 0.0004 + gNail * 0.0016 - gFold * 0.0012;
-  vec3 N = bumpN(Ng, vW, h);
-  vec3 dN = vec3(vnoise(pr * 210.0 + 3.0), vnoise(pr * 210.0 + 9.0), vnoise(pr * 210.0 + 15.0)) - 0.5;
-  N = normalize(N + dN * 0.025 * (1.0 - gNail));
-  float NoV = clamp(dot(N, V), 0.0001, 1.0); float NoL = dot(N, L);
-  float sh = shadowAt(vW, Ng);
-  vec3 wrap = clamp(vec3((NoL + 0.62) / 1.62, (NoL + 0.34) / 1.34, (NoL + 0.18) / 1.18), 0.0, 1.0);
-  float ao = mix(0.30, 1.0, vAO);
-  vec3 amb = irradiance(N) * ao * (1.0 - 0.2 * (1.0 - sh));
-  vec3 diff = alb * (amb + keyColor() * wrap * sh);
-  vec3 sssC = vec3(0.92, 0.27, 0.15);
-  float term = smoothstep(-0.35, 0.25, NoL) * (1.0 - smoothstep(0.1, 0.7, NoL));
-  float thin = 1.0 - smoothstep(0.20, 0.55, vTh);
-  diff += alb * sssC * keyColor() * (term * sh * (0.10 + 0.24 * thin) + pow(clamp(dot(-L, V) * 0.5 + 0.5, 0.0, 1.0), 3.0) * thin * 0.30) * ao;
-  vec3 R = reflect(-V, N);
-  vec3 spec = envColor(R, 0.42) * envBRDF(vec3(0.028), 0.42, NoV) * (0.6 + 0.4 * sh);
-  spec += envColor(R, 0.16) * envBRDF(vec3(0.02), 0.16, NoV) * (0.5 + 0.5 * sh) * (0.35 + 0.6 * gTip);   // a little skin oil on the pads
-  vec3 specN = envColor(R, 0.10) * envBRDF(vec3(0.05), 0.10, NoV) * (0.5 + 0.5 * sh) * 1.5;
-  spec = mix(spec, specN, gNail);
-  float rim = pow(1.0 - NoV, 3.0); vec3 rimc = alb * rim * irradiance(N) * 0.30;
-  o = vec4(finish(diff + spec + rimc), 1.0) * uWeight;
 }`;
 
 // ---------------------------------------------------------------- clear PVC card holder (alpha-blended, premultiplied)

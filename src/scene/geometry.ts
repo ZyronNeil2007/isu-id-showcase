@@ -110,21 +110,6 @@ export function sphere(seg = 24, rings = 14): Geo {
   return pack(P, N, U, null, I);
 }
 
-// Open sleeve tube around +Y: radius profile r(y) with fabric folds, uv = (angle/2pi*?, y)
-export function sleeve(y0: number, y1: number, rAt: (y: number, a: number) => number, ex: number, ez: number, rows = 90, seg = 72): Geo {
-  const P: number[] = [], N: number[] = [], U: number[] = [], I: number[] = [];
-  const pt = (y: number, a: number): V3 => { const r = rAt(y, a); return [Math.cos(a) * r * ex, y, Math.sin(a) * r * ez]; };
-  for (let i = 0; i <= rows; i++) for (let j = 0; j <= seg; j++) {
-    const y = y0 + (y1 - y0) * i / rows, a = j / seg * Math.PI * 2;
-    const p = pt(y, a), pa = pt(y, a + 0.01), py = pt(y + 0.01, a);
-    const ta: V3 = [pa[0] - p[0], pa[1] - p[1], pa[2] - p[2]], ty: V3 = [py[0] - p[0], py[1] - p[1], py[2] - p[2]];
-    const n: V3 = [ta[1] * ty[2] - ta[2] * ty[1], ta[2] * ty[0] - ta[0] * ty[2], ta[0] * ty[1] - ta[1] * ty[0]]; const l = Math.hypot(...n) || 1;
-    P.push(...p); N.push(n[0] / l, n[1] / l, n[2] / l); U.push(j / seg, i / rows);
-  }
-  for (let i = 0; i < rows; i++) for (let j = 0; j < seg; j++) { const a = i * (seg + 1) + j, b = a + seg + 1; I.push(a, a + 1, b, b, a + 1, b + 1); }
-  return pack(P, N, U, null, I);
-}
-
 // Catmull-Rom spline through control points (centripetal-free uniform variant), `sub` samples per span.
 export function catmull(pts: V3[], sub = 8): V3[] {
   const out: V3[] = [], n = pts.length;

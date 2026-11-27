@@ -18,18 +18,11 @@ const lerp3 = (a: V3, b: V3, t: number): V3 => v3.lerp(a, b, t);
 const T = (p: V3) => m4.translate(p[0], p[1], p[2]);
 const mulAll = (...ms: M4[]) => ms.reduce((a, b) => m4.mul(a, b));
 
-// ---------------------------------------------------------------- hand <-> card relationship (from the pinch solve)
-const yc: V3 = v3.norm([-0.0018, 0.9998, 0.0219]), zc: V3 = v3.norm([-0.08, -0.022, 0.9966]);
-const xc: V3 = v3.norm(v3.cross(yc, zc));
-const cc: V3 = [0.4081, 1.1759, 0.5358];
-const CIH = new Float32Array([xc[0], xc[1], xc[2], 0, yc[0], yc[1], yc[2], 0, zc[0], zc[1], zc[2], 0, cc[0], cc[1], cc[2], 1]);
-const CIH_INV = m4.invert(CIH);
 export const CARD_H = 0.86, CARD_W = 0.54;
-const SKIN: V3 = [0.46, 0.265, 0.175];
 
 // ---------------------------------------------------------------- hardware / holder geometry (lanyard space, +y up)
-const HANG_Y = 1.0;                       // lanyard origin (where the strands meet) when hanging
-const RING_Y = -1.31;                     // split ring centre
+const HANG_Y = 0.725;                      // lanyard origin (where the strands meet) when hanging
+const RING_Y = -1.035;                    // split ring centre (HANG_Y + RING_Y is unchanged, so the badge hangs exactly where it did)
 const CARD_BELOW = 0.50;                  // card centre sits this far below the ring when seated
 const SLIDE_OUT = 0.95;                   // how far the card is pulled out of the holder (downwards) to be free
 const HANG_POS: V3 = [0, HANG_Y, 0];
@@ -40,30 +33,7 @@ export function lanyardMatrix(pos: V3, theta: number): M4 {
 // holder frame (also the seated card): swings about the split ring; `slide` pulls the card down out of the holder
 function attachedCard(lanM: M4, phi: number, slide = 0): M4 { return mulAll(lanM, T([0, RING_Y, 0]), m4.rotZ(phi), T([0, -CARD_BELOW - slide, 0])); }
 
-// ---------------------------------------------------------------- hero keyframes
-const P_REL = 0.275;
-const CARD_START_Y = HANG_Y + RING_Y - CARD_BELOW - SLIDE_OUT;          // card waits just under the holder
-const hx = curve([[0, 0.55], [0.12, 0.02], [0.2, 0], [P_REL, 0.04], [0.4, 0.2], [0.6, 0.0], [0.74, 0], [1, 0]]);
-const hy = curve([[0, -1.55], [0.1, -0.78], [0.15, -0.72], [0.205, -0.84, -0.3], [P_REL, -0.12, 9.5], [0.34, 0.42, 6], [0.4, 0.55, 0], [0.52, 0.42, -1.0], [0.62, 0.30, -1.4], [0.70, -0.9, -7], [0.745, CARD_START_Y, -1.5], [1, CARD_START_Y, 0]]);
-const hz = curve([[0, 0.3], [0.2, 0.3], [P_REL, 0.35], [0.4, 0.62], [0.55, 0.62], [0.68, 0.55], [0.745, 0.0], [1, 0]]);
-const pitch = curve([[0, 0], [0.14, 0], [0.205, -0.24], [0.245, 0.30, 6], [P_REL, 0.34, 0], [0.36, 0.1, -3], [0.44, -0.12, 0], [0.56, 0.06, 0], [0.66, 0, 0], [1, 0]]);
-const roll = curve([[0, -0.1], [0.14, -0.02], [P_REL, 0.03], [0.36, 0.22, 0], [0.46, -0.2, 0], [0.56, 0.1], [0.66, 0, 0], [1, 0]]);
-const yawC = (p: number) => { const r = clamp((p - P_REL) / 0.355); return Math.PI * 2 * (r * r * (3 - 2 * r)) + 0.06 * Math.sin(p * 30) * (1 - r) * (p > P_REL ? 1 : 0); };
-const bendAt = (p: number) => {
-  const flick = Math.exp(-Math.pow((p - 0.255) / 0.016, 2));
-  const rel = p > P_REL ? Math.exp(-(p - P_REL) * 38) * Math.cos((p - P_REL) * 210) * 0.1 : 0;
-  return flick * 0.1 + rel;
-};
-
-export function heroCardPose(p: number): { pos: V3; quat: Q4 } {
-  const pos: V3 = [hx(p), hy(p), hz(p)];
-  const yaw = p > P_REL ? yawC(p) : 0;
-  return { pos, quat: q.euler(pitch(p), yaw, roll(p)) };
-}
-const cardMatrix = (pose: { pos: V3; quat: Q4 }) => m4.fromTRS(pose.pos, pose.quat);
-
-// lanyard descent + swing
-const lanY = curve([[0.50, 5.2], [0.56, 4.2, -9], [0.66, 2.2, -9], [0.72, 1.15, -3.2], [0.745, HANG_Y, 2], [0.77, HANG_Y, 0], [1, HANG_Y, 0]]);
+// the hero (hand toss -> flip -> lanyard -> attach) is a pre-baked image sequence: see src/hero and tools/bake.py
 const swing = (t: number, amp: number) => amp * Math.exp(-t * 3.1) * Math.sin(t * 8.4);
 
 export interface HudState {
@@ -88,8 +58,8 @@ export const STOPS: Stop[] = [
   { id: 'ornament', s: 395, d: 0.95, p0: 0.625, p1: 0.675, pan: [375, 415] },
   { id: 'seal', s: 450, d: 0.5, p0: 0.71, p1: 0.76, pan: [447, 453] },
   { id: 'wordmark', s: 728, d: 2.4, p0: 0.795, p1: 0.85, pan: [660, 800] },
-  { id: 'buckle', p0: 0.89, p1: 0.935, hw: { eye: [0.25, -0.26, 1.85], tgt: [0, -0.32, 0], orbit: 0.5 } },
-  { id: 'clasp', p0: 0.965, p1: 1.0, hw: { eye: [0.3, -1.1, 1.95], tgt: [0, -1.16, 0], orbit: 0.4 } },
+  { id: 'buckle', p0: 0.89, p1: 0.935, hw: { eye: [0.22, -0.1, 1.95], tgt: [0, -0.2, 0], orbit: 0.5 } },
+  { id: 'clasp', p0: 0.965, p1: 1.0, hw: { eye: [0.26, -0.77, 1.7], tgt: [0, -0.86, 0], orbit: 0.4 } },
 ];
 const WORDS: [number, number][] = [[62.5, 95.2], [107.9, 141.2], [153.9, 244.4], [257, 311.4]];
 
@@ -129,65 +99,15 @@ export class Story {
 
     const frame: Frame = {
       w: 0, h: 0, eye: [0, 0, 5.6], target: [0, 0, 0], up: [0, 1, 0], fov: 28, mood: 0, spot: [0, 0.05], exposure: 1.0,
-      lightCenter: [0, 0, 0], lightExtent: 3.4, shadow: true, cards: [], blur: null, lan: null, hand: null, wall: 1, keyDir: v3.norm([-0.42, 0.50, 0.76]),
+      lightCenter: [0, 0, 0], lightExtent: 3.4, shadow: true, cards: [], lan: null, wall: 1, keyDir: v3.norm([-0.42, 0.50, 0.76]),
     };
     const hud: HudState = { p: pr, section: 'reveal', stop: -1, stopT: 0, item: -1, itemT: 0, cardM: m4.ident(), cardM2: null, lanM: null, jaw: 0, showEdit: 0, flipB: 0, words: -1, path: I.path, hold: 0, pLocal: 0 };
     const mkLan = (M: M4, jaw: number, phiHolder: number, hl: [number, number, number, number] = [0, 0, 0, 0]) => ({ M, jaw, hl, holder: attachedCard(M, phiHolder, 0) });
 
-    // ============================================================ 01 REVEAL
+    // ============================================================ 02 LANYARD TOUR
     const cur = this.section(I);
     hud.section = cur;
-    if (cur === 'reveal') {
-      const p = pr.reveal; hud.pLocal = p;
-      let cardM = cardMatrix(heroCardPose(p));
-      const inHand = p <= P_REL;
-      // hand follows the card until release, then continues on its own path
-      const handFromCard = (pp: number) => m4.mul(cardMatrix(heroCardPose(pp)), CIH_INV);
-      let handM: M4;
-      if (inHand) handM = handFromCard(p);
-      else {
-        const base = handFromCard(P_REL);
-        const dx = curve([[P_REL, 0], [P_REL + 0.05, 0.12], [0.36, 0.3], [0.45, 0.65], [0.55, 1.15]])(p), dy = curve([[P_REL, 0], [P_REL + 0.05, 0.42], [0.34, 0.5, -1], [0.42, -0.5, -9], [0.52, -2.2, -9], [0.6, -3.4]])(p), dz = curve([[P_REL, 0], [0.4, 0.35], [0.55, 0.5]])(p);
-        handM = m4.mul(T([dx, dy, dz]), base);
-      }
-      frame.hand = { M: handM, open: smooth(0.24, 0.29, p), relax: smooth(0.31, 0.46, p), flick: -Math.exp(-Math.pow((p - 0.235) / 0.025, 2)), skin: SKIN };
-      if (p > 0.64) frame.hand = null;
-      // lanyard assembly arrives from above with the clear holder hanging empty
-      if (p > 0.49) {
-        const th = swing(Math.max(0, (p - 0.745) * 26), reduced ? 0.008 : 0.03) + idle * 0.003 * Math.sin(time * 0.9) * smooth(0.9, 1, p);
-        const lanM = lanyardMatrix([0, lanY(p), 0], th);
-        const gate = p < 0.82 ? 0.7 : lerp(0.7, 0, easeOut(clamp((p - 0.82) / 0.04)));        // the lobster gate snaps shut once the card is seated
-        const phiH = -swing(Math.max(0, (p - 0.835) * 26), reduced ? 0.01 : 0.09) + idle * 0.006 * Math.sin(time * 1.3 + 1) * smooth(0.9, 1, p);
-        frame.lan = mkLan(lanM, gate, phiH); hud.lanM = lanM; hud.jaw = gate;
-        // the card swoops under the holder, then slides up into it
-        const slide = p < 0.77 ? SLIDE_OUT : SLIDE_OUT * (1 - easeInOut(range(p, 0.77, 0.83)));
-        const seated = attachedCard(lanM, phiH, slide);
-        const w = smooth(0.69, 0.74, p);
-        cardM = w <= 0 ? cardM : blendM(cardM, seated, w);
-      }
-      const bend = bendAt(p);
-      frame.cards = [{ M: cardM, bend: [bend, bend * 0.4], glow: 0 }];
-      hud.cardM = cardM;
-      // motion blur on the card in flight
-      const speed = v3.len(v3.sub(heroCardPose(p).pos, heroCardPose(Math.max(0, p - 0.004)).pos)) / 0.004;
-      const qa = heroCardPose(p).quat, qb = heroCardPose(Math.max(0, p - 0.004)).quat;
-      const om = 2 * Math.acos(clamp(Math.abs(qa[0] * qb[0] + qa[1] * qb[1] + qa[2] * qb[2] + qa[3] * qb[3]), 0, 1)) / 0.004;
-      if (!reduced && p < 0.69 && (speed > 1.0 || om > 2.5)) {
-        const Texp = Math.min(0.011, 0.06 / Math.max(speed, 1e-3), 0.22 / Math.max(om, 1e-3)), K = 12, ms: M4[] = [];
-        for (let i = 0; i < K; i++) ms.push(cardMatrix(heroCardPose(clamp(p - Texp * (i / (K - 1)) + Texp * 0.5, 0, 1))));
-        frame.blur = ms;
-      }
-      // camera: close for the hand and the spin, pulls back while the card swoops under the holder, then pushes in
-      const ty = curve([[0, -0.55], [0.12, -0.42], [0.27, -0.4], [0.38, 0.12], [0.48, 0.2], [0.62, 0.05], [0.70, -0.5], [0.83, -0.5], [1, -0.15]])(p);
-      const dist = (curve([[0, 5.9], [0.27, 5.4], [0.4, 4.4], [0.52, 4.4], [0.62, 5.2], [0.70, 6.7], [0.83, 6.7], [1, 5.45]])(p)) * wide;
-      frame.target = [0, ty, 0]; frame.eye = [mx * 0.32, ty + 0.22 + my * 0.14, dist];
-      frame.spot = [0.0, 0.04 + 0.12 * smooth(0.3, 0.45, p) - 0.02];
-      frame.mood = 0; frame.lightCenter = [0, 0.1, 0]; frame.lightExtent = 3.9; frame.wall = 1;
-      hud.hold = 1 - smooth(0.2, 0.3, p);
-    }
-
-    // ============================================================ 02 LANYARD TOUR
-    else if (cur === 'lanyard') {
+    if (cur === 'lanyard') {
       const p = pr.lanyard; hud.pLocal = p;
       const lanM = lanyardMatrix(HANG_POS, idle * 0.012 * Math.sin(time * 0.6));
       const phiH = idle * 0.008 * Math.sin(time * 1.1);

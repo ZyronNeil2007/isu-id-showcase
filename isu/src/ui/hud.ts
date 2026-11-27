@@ -10,7 +10,7 @@ const $ = <T extends HTMLElement = HTMLElement>(id: string) => document.getEleme
 const WORDS: [number, number][] = [[62.5, 95.2], [107.9, 141.2], [153.9, 244.4], [257, 311.4]];
 const TITLES = ['The strap', 'Core values', 'The flame', 'Ornament', 'University seal', 'Wordmark', 'Side-release buckle', 'Swivel lobster clasp'];
 const ANCHOR_S = [70, 187, 332, 395, 450, 728];   // strap point each callout points at (mm along the strip)
-const HW_ANCHOR: Record<number, V3> = { 6: [0.0, -0.22, 0.05], 7: [0.0, -1.08, 0.05] };   // hardware stops: fixed points in lanyard space
+const HW_ANCHOR: Record<number, V3> = { 6: [0.0, -0.16, 0.05], 7: [0.0, -0.90, 0.05] };   // hardware stops: fixed points in lanyard space
 
 export class Hud {
   world!: World; root = $('hud'); root2 = $('hud2'); lines = document.getElementById('lines') as unknown as SVGSVGElement;

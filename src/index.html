@@ -11,7 +11,9 @@
   <div class="ld-bar" aria-hidden="true"><i id="ldBar"></i></div>
 </div>
 
-<canvas id="gl" role="img" aria-label="Interactive 3D showcase of the Isabela State University student ID card and lanyard"></canvas>
+<!-- hero: pre-rendered frame sequence scrubbed by scroll (2D canvas, no WebGL). The static image shows if the frames cannot load or motion is reduced. -->
+<div id="seq" role="img" aria-label="A hand tosses the Isabela State University student ID, it spins, and clips onto the green lanyard"><div id="seqStatic"></div><canvas id="seqc"></canvas></div>
+<canvas id="gl" aria-hidden="true"></canvas>
 <svg id="lines" aria-hidden="true"><g id="ln-tour"><path class="lead" id="ln-lead"/><circle class="dot" id="ln-dot" r="4"/><circle class="ring" id="ln-ring" r="4"/></g>
   <g id="ln-id"><polygon class="box" id="ln-box" pathLength="1"/><path class="lead" id="ln-idlead"/><g id="ln-ticks"></g></g></svg>
 
@@ -57,7 +59,7 @@
     <article class="callout" data-stop="4"><span class="n">05</span><h3>University seal</h3><p>The Isabela State University seal, 1978, printed in full colour at the centre of the strap.</p></article>
     <article class="callout wide" data-stop="5"><span class="n">06</span><h3>Wordmark</h3><p>&ldquo;Isabela State University&rdquo; in gold serif capitals runs along the second strand.</p></article>
     <article class="callout" data-stop="6"><span class="n">07</span><h3>Side-release buckle</h3><p>A black two-part buckle joins the strap to the green end-piece. Squeeze both side prongs to release it, and the lanyard breaks away safely. Hardware shown is an illustrative model; the supplied SVG defines only the fabric.</p></article>
-    <article class="callout" data-stop="7"><span class="n">08</span><h3>Swivel lobster clasp</h3><p>A silver lobster clasp on a swivel eye. Press the spring gate to open it, so the ID never twists the strap. It holds the split ring of the clear badge holder.</p></article>
+    <article class="callout" data-stop="7"><span class="n">08</span><h3>Swivel lobster clasp</h3><p>A polished D-ring swivel clasp. The flat-topped D-ring loops round the end-piece and the swivel keeps the ID from twisting the strap. Press the spring gate to open it. It holds the split ring of the clear badge holder.</p></article>
   </div>
   <div class="tourbar" id="tourbar" aria-hidden="true"><b id="tbN">01</b><span id="tbT">The strap</span><i><u id="tbP"></u></i></div>
 

@@ -4,6 +4,7 @@ import { M4, V3, m4, v3, DEG } from '../engine/math';
 import * as S from '../engine/shaders';
 import { slab, torus, roundedBox, capsule, sphere, tube, catmull, Geo } from './geometry';
 import { buildPath, ribbon, Path } from './lanyard';
+import { buildHardware, GATE_PIVOT, SLEEVE_SHIFT, SLEEVE_LEN } from './hardware';
 
 export interface CardDraw { M: M4; bend: [number, number]; glow: number; }
 export interface Frame {
@@ -37,36 +38,14 @@ export class World {
     this.cardMesh = g.mesh(attrs(card), card.idx);
     const r = ribbon(this.path);
     this.strapMesh = g.mesh([{ loc: 0, data: r.pos, size: 3 }, { loc: 1, data: r.nor, size: 3 }, { loc: 2, data: r.uv, size: 2 }, { loc: 3, data: r.tan, size: 4 }], r.idx);
-    const sl = slab(0.20, 0.50, 0.034, 0.03, 0.004, 6);
-    for (let i = 1; i < sl.pos.length; i += 3) sl.pos[i] -= 0.61;   // sleeve spans y -0.36 .. -0.86: its upper part sits inside the buckle, the rest hangs below it
+    const sl = slab(0.20, SLEEVE_LEN, 0.034, 0.03, 0.004, 6);
+    for (let i = 1; i < sl.pos.length; i += 3) sl.pos[i] += SLEEVE_SHIFT;   // short visible tab (see hardware.ts): top tucked in the buckle, bottom folded round the D-ring
     const tan = new Float32Array(sl.pos.length / 3 * 4); for (let i = 0; i < tan.length; i += 4) tan[i + 1] = 1;
     this.sleeveMesh = g.mesh(attrs(sl, [{ loc: 3, data: tan, size: 4 }]), sl.idx);
     const wq = new Float32Array([-14, -9, 0, 14, -9, 0, 14, 9, 0, -14, 9, 0]);
     this.wallMesh = g.mesh([{ loc: 0, data: wq, size: 3 }], new Uint16Array([0, 1, 2, 0, 2, 3]));
-    // hardware (lanyard space, origin = where the two strands meet; y points up, the card hangs towards -y)
-    const mk = (geo: Geo, M: M4, base: V3, rough: number, metal: number, gate = false) => this.hardware.push({ mesh: g.mesh(attrs(geo), geo.idx), M, base, rough, metal, jaw: gate });
-    const steel: V3 = [0.80, 0.81, 0.83], satin: V3 = [0.66, 0.68, 0.70], blk: V3 = [0.020, 0.022, 0.024], blk2: V3 = [0.006, 0.006, 0.007];
-    const T3 = (x: number, y: number, z: number) => m4.translate(x, y, z);
-    // side-release buckle: receptacle (upper) + plug (lower) with squeeze tabs, the two strands enter the top
-    mk(roundedBox(0.138, 0.14, 0.037, 0.024, 6), T3(0, -0.12, 0), blk, 0.34, 0);
-    mk(roundedBox(0.126, 0.118, 0.033, 0.02, 6), T3(0, -0.388, 0), blk, 0.34, 0);
-    mk(roundedBox(0.105, 0.004, 0.026, 0.002, 3), T3(0, -0.2625, 0), blk2, 0.6, 0);                      // seam between the halves
-    for (const sx of [-1, 1]) mk(roundedBox(0.011, 0.07, 0.024, 0.008, 5), T3(sx * 0.133, -0.385, 0), blk, 0.28, 0);   // release tabs
-    for (const sx of [-1, 1]) mk(roundedBox(0.006, 0.05, 0.02, 0.004, 3), T3(sx * 0.14, -0.15, 0), blk, 0.3, 0);       // receptacle side lugs
-    mk(roundedBox(0.092, 0.07, 0.003, 0.003, 4), T3(0, -0.12, 0.0385), blk, 0.22, 0);                     // raised panel
-    for (const y of [-0.355, -0.388, -0.421]) mk(roundedBox(0.072, 0.0035, 0.0025, 0.0015, 3), T3(0, y, 0.0335), blk, 0.3, 0);   // grip ribs
-    mk(roundedBox(0.098, 0.006, 0.02, 0.003, 3), T3(0, -0.506, 0), blk2, 0.5, 0);                         // strap slot under the plug
-    // swivel lobster clasp (face-on in the XY plane): eye, barrel, claw body, spring gate with thumb trigger
-    mk(torus(0.032, 0.0085, 40, 12), T3(0, -0.885, 0), steel, 0.17, 1);
-    mk(capsule(-0.034, 0.034, 0.0185, 24, 8), T3(0, -0.955, 0), steel, 0.2, 1);
-    mk(capsule(-0.018, 0.018, 0.0235, 24, 8), m4.mul(T3(0, -1.0, 0), m4.rotZ(Math.PI / 2)), satin, 0.24, 1);
-    const claw = catmull([[0.018, -0.997, 0], [-0.022, -1.0, 0], [-0.052, -1.035, 0], [-0.07, -1.095, 0], [-0.075, -1.165, 0], [-0.067, -1.232, 0], [-0.045, -1.288, 0], [-0.008, -1.322, 0], [0.034, -1.314, 0], [0.064, -1.274, 0], [0.076, -1.226, 0]], 7);
-    mk(tube(claw, u => 0.0132 + 0.0035 * Math.sin(Math.PI * Math.min(1, u * 1.1)), 14), m4.ident(), steel, 0.17, 1);
-    const gate = catmull([[0.030, -1.003, 0], [0.056, -1.04, 0], [0.071, -1.1, 0], [0.077, -1.17, 0], [0.076, -1.226, 0]], 7);
-    mk(tube(gate, 0.0072, 10), m4.ident(), satin, 0.2, 1, true);
-    mk(roundedBox(0.016, 0.026, 0.012, 0.008, 5), m4.mul(T3(0.058, -1.03, 0), m4.rotZ(-0.35)), satin, 0.22, 1, true);   // thumb trigger
-    // split ring in the YZ plane: it links the claw's lower bar and passes through the holder's hanging slot
-    mk(torus(0.04, 0.0062, 56, 10), m4.mul(T3(0, -1.31, 0), m4.rotY(Math.PI / 2)), steel, 0.16, 1);
+    // hardware (lanyard space, origin = where the two strands meet; y points up, the card hangs towards -y): see hardware.ts
+    for (const h of buildHardware()) this.hardware.push({ mesh: g.mesh(attrs(h.geo), h.geo.idx), M: h.M, base: h.base, rough: h.rough, metal: h.metal, jaw: h.jaw });
     const hold = slab(0.60, 0.96, 0.016, 0.05, 0.004, 8);
     this.holderMesh = g.mesh(attrs(hold), hold.idx);
     this.shadow = g.shadow(mobile ? 1024 : 2048);
@@ -128,7 +107,7 @@ export class World {
 
     const lan = f.lan;
     let jawM: M4 | null = null;
-    if (lan) { const px = 0.030, py = -1.003; jawM = m4.mul(m4.translate(px, py, 0), m4.mul(m4.rotZ(-lan.jaw * 0.75), m4.translate(-px, -py, 0))); }   // spring gate swings inward
+    if (lan) { const px = GATE_PIVOT[0], py = GATE_PIVOT[1]; jawM = m4.mul(m4.translate(px, py, 0), m4.mul(m4.rotZ(-lan.jaw * 0.75), m4.translate(-px, -py, 0))); }   // spring gate swings inward
 
     // ---------- shadow pass
     // the depth texture is sampled by the main pass, so detach it before rendering into it (avoids a feedback loop)

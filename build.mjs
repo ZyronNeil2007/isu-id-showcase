@@ -1,5 +1,5 @@
 // Build: embed assets -> bundle TypeScript with esbuild -> inline everything into dist/index.html
-import { readFileSync, writeFileSync } from 'node:fs';
+import { readFileSync, writeFileSync, mkdirSync, cpSync } from 'node:fs';
 import { build } from 'esbuild';
 const uri = (p, m) => `data:${m};base64,` + readFileSync(new URL(p, import.meta.url)).toString('base64');
 const A = {
@@ -12,9 +12,13 @@ writeFileSync(new URL('src/art/assets.generated.ts', import.meta.url), `// GENER
 const entry = process.argv[2] || 'src/main.ts';
 const out = await build({ entryPoints: [entry], bundle: true, minify: process.env.DEV ? false : true, format: 'iife', target: 'es2020', write: false, legalComments: 'none', logLevel: 'warning' });
 const js = out.outputFiles[0].text.replace(/<\/script/g, '<\\/script');
-const css = readFileSync(new URL('src/styles.css', import.meta.url), 'utf8');
+const webp = f => 'data:image/webp;base64,' + readFileSync(new URL('assets/animation/' + f, import.meta.url)).toString('base64');
+const css = readFileSync(new URL('src/styles.css', import.meta.url), 'utf8').replace('__STATIC_L__', () => webp('static_l.webp')).replace('__STATIC_P__', () => webp('static_p.webp'));
 let html = readFileSync(new URL('src/index.html', import.meta.url), 'utf8');
 html = html.replace('/*__CSS__*/', () => css).replace('/*__JS__*/', () => js);
+// the numbered frame sets ship next to the page (lazy-loaded at run time), never inline
+mkdirSync(new URL('dist/assets', import.meta.url), { recursive: true });
+cpSync(new URL('assets/animation', import.meta.url), new URL('dist/assets/animation', import.meta.url), { recursive: true });
 writeFileSync(new URL('dist/artifact.html', import.meta.url), html);                       // fragment for Artifact publishing
 writeFileSync(new URL('dist/index.html', import.meta.url), '<!doctype html>\n<meta charset="utf-8">\n<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">\n' + html);
 console.log('dist/index.html', (html.length / 1048576).toFixed(2), 'MB');

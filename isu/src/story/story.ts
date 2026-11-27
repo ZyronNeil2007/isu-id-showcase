@@ -21,8 +21,8 @@ const mulAll = (...ms: M4[]) => ms.reduce((a, b) => m4.mul(a, b));
 export const CARD_H = 0.86, CARD_W = 0.54;
 
 // ---------------------------------------------------------------- hardware / holder geometry (lanyard space, +y up)
-const HANG_Y = 1.0;                       // lanyard origin (where the strands meet) when hanging
-const RING_Y = -1.31;                     // split ring centre
+const HANG_Y = 0.725;                      // lanyard origin (where the strands meet) when hanging
+const RING_Y = -1.035;                    // split ring centre (HANG_Y + RING_Y is unchanged, so the badge hangs exactly where it did)
 const CARD_BELOW = 0.50;                  // card centre sits this far below the ring when seated
 const SLIDE_OUT = 0.95;                   // how far the card is pulled out of the holder (downwards) to be free
 const HANG_POS: V3 = [0, HANG_Y, 0];
@@ -58,8 +58,8 @@ export const STOPS: Stop[] = [
   { id: 'ornament', s: 395, d: 0.95, p0: 0.625, p1: 0.675, pan: [375, 415] },
   { id: 'seal', s: 450, d: 0.5, p0: 0.71, p1: 0.76, pan: [447, 453] },
   { id: 'wordmark', s: 728, d: 2.4, p0: 0.795, p1: 0.85, pan: [660, 800] },
-  { id: 'buckle', p0: 0.89, p1: 0.935, hw: { eye: [0.25, -0.26, 1.85], tgt: [0, -0.32, 0], orbit: 0.5 } },
-  { id: 'clasp', p0: 0.965, p1: 1.0, hw: { eye: [0.3, -1.1, 1.95], tgt: [0, -1.16, 0], orbit: 0.4 } },
+  { id: 'buckle', p0: 0.89, p1: 0.935, hw: { eye: [0.22, -0.1, 1.95], tgt: [0, -0.2, 0], orbit: 0.5 } },
+  { id: 'clasp', p0: 0.965, p1: 1.0, hw: { eye: [0.26, -0.77, 1.7], tgt: [0, -0.86, 0], orbit: 0.4 } },
 ];
 const WORDS: [number, number][] = [[62.5, 95.2], [107.9, 141.2], [153.9, 244.4], [257, 311.4]];
 

@@ -23,7 +23,19 @@ button,input,textarea{font:inherit;color:inherit}
 :focus-visible{outline:2px solid var(--gold);outline-offset:3px;border-radius:6px}
 
 /* ---------------------------------------------------------------- stage */
-#gl{position:fixed;inset:0;width:100%;height:100%;z-index:0;background:#0a1a10;touch-action:pan-y}
+#seq,#gl{position:fixed;inset:0;width:100%;height:100%;z-index:0;pointer-events:none}
+#seq{overflow:hidden;background:radial-gradient(ellipse 80% 70% at 50% 42%,#f5f1e7,#cfcabd)}
+#seq canvas,#seqStatic{position:absolute;inset:0;width:100%;height:100%;display:block}
+#seqc{opacity:0;transition:opacity .4s}
+.seq-ready #seqc{opacity:1}
+#seqStatic{background:url(__STATIC_L__) center/cover no-repeat;opacity:0}
+@media (max-aspect-ratio:9/10){#seqStatic{background-image:url(__STATIC_P__)}}
+.seq-fail #seqStatic,.reduced #seqStatic{opacity:1}
+.seq-fail #seqc,.reduced #seqc{display:none}
+/* the 3D scenes (lanyard tour onward) fade in over the last hero frame, which is the same pose */
+#gl{background:#0a1a10;opacity:0;transition:opacity .35s ease-out}
+.gl-on #gl{opacity:1}
+.gl-on #seq{visibility:hidden;transition:visibility 0s .4s}
 #story{position:relative;z-index:1;pointer-events:none}
 .scene{position:relative;width:100%}
 #reveal{height:620vh} #lanyard{height:820vh} #identity{height:900vh} #frontback{height:380vh} #final{height:260vh}
@@ -200,11 +212,12 @@ button,input,textarea{font:inherit;color:inherit}
   .stmt span{display:block;margin:2px 0}
 }
 @media (prefers-reduced-motion:reduce){
+  #reveal{height:150vh}#seqc,#gl{transition:none}
   .cue i,.ld-card{animation:none}.beat,.callout,.idpanel,.editor,.finale>*,.words span{transition-duration:.01s!important}
 }
 
 /* ---------------------------------------------------------------- no WebGL: flat fallback */
-.no-webgl #gl,.no-webgl #hud,.no-webgl #hud2,.no-webgl #lines,.no-webgl #story .scene{display:none!important}
+.no-webgl #seq,.no-webgl #gl,.no-webgl #hud,.no-webgl #hud2,.no-webgl #lines,.no-webgl #story .scene{display:none!important}
 .no-webgl #fallback{display:block;padding:80px var(--gr) 40px var(--gx);background:radial-gradient(1200px 600px at 50% 0,#173f29,#06120b);color:#f3f7f2}
 .no-webgl #fallback h1{margin:0;font-size:clamp(40px,8vw,88px);line-height:1;letter-spacing:-.02em}
 .no-webgl #fallback .eyebrow{color:#F7D000}.no-webgl #fallback .lede{color:#b8cabd}

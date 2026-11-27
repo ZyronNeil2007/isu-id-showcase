@@ -14,11 +14,14 @@ const { attrs, idx } = handAttrs(); const mesh = g.mesh(attrs, idx);
 const prog = g.program('skin', SKIN_VS, SKIN_FS);
 const bones = new Float32Array(24 * 16);
 const open = +(q.get('open') || 0), relax = +(q.get('relax') || 0);
-skinMatrices(poseFor(open, relax, 0), bones);
+const pose = poseFor(open, relax, 0); const ov = q.get('pose'); if (ov) { const o = JSON.parse(ov); for (const k in o) pose[k] = o[k]; }
+skinMatrices(pose, bones);
 const yaw = +(q.get('yaw') || 0) * DEG, pitch = +(q.get('pitch') || 0) * DEG, dist = +(q.get('d') || 5);
 const CIH = { z: [-0.08, -0.022, 0.9966], y: [-0.0018, 0.9998, 0.0219], c: [0.4081, 1.1759, 0.5358] } as any;
 const zc = CIH.z as V3, yc = CIH.y as V3, xc = v3.cross(yc, zc);
-const cardM = new Float32Array([xc[0], xc[1], xc[2], 0, yc[0], yc[1], yc[2], 0, zc[0], zc[1], zc[2], 0, CIH.c[0], CIH.c[1], CIH.c[2], 1]);
+const cdy = +(q.get('dy') || 0) / 100, cdz = +(q.get('dz') || 0) / 100, cdx = +(q.get('dx') || 0) / 100;   // card offset in mm along hand-card axes
+const cc2 = v3.add(v3.add(v3.add(CIH.c, v3.mul(yc, cdy)), v3.mul(zc, cdz)), v3.mul(xc, cdx));
+const cardM = new Float32Array([xc[0], xc[1], xc[2], 0, yc[0], yc[1], yc[2], 0, zc[0], zc[1], zc[2], 0, cc2[0], cc2[1], cc2[2], 1]);
 let cam: V3, target: V3, up: V3 = [0, 1, 0];
 if (q.get('view') === 'card') { target = v3.add(CIH.c, v3.mul(yc, -0.2)) as V3; const d = v3.add(v3.mul(zc, Math.cos(yaw)), v3.mul(xc, Math.sin(yaw))); cam = v3.add(target, v3.mul(v3.norm(v3.add(d, v3.mul(yc, Math.sin(pitch)))), dist)) as V3; up = yc; }
 else { cam = [Math.sin(yaw) * Math.cos(pitch) * dist, Math.sin(pitch) * dist + 0.5, Math.cos(yaw) * Math.cos(pitch) * dist]; target = [0, 0.4, 0]; }

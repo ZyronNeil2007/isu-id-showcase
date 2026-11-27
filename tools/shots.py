@@ -16,7 +16,7 @@ async def main():
             y=await pg.evaluate('''([k,v])=>{const S=__isu.sections,vh=innerHeight;let y;
               if(k=='frontback'||k=='final') y=S[k].top+v*(S[k].h-vh); else if(k=='details') y=S[k].top+v*(S[k].h-vh); else y=S[k].top+v*S[k].h; return y}''',[k,v])
             await pg.evaluate('([y])=>{window.scrollTo(0,y)}',[y]); await pg.wait_for_timeout(120)
-            await pg.evaluate('([y])=>__isu.run(y,1.0)',[y]); await pg.evaluate('([y])=>__isu.run(y,3.0)',[y]); await pg.wait_for_timeout(900)
+            await pg.evaluate('([y])=>__isu.run(y,1.0)',[y]); await pg.evaluate('([y])=>__isu.run(y,3.0)',[y]); await pg.wait_for_timeout(int(__import__("os").environ.get("WAIT","900")))
             await pg.screenshot(path=f'{pre}_{k}_{v:.3f}.png')
             print('shot',k,v,round(y))
         await b.close()

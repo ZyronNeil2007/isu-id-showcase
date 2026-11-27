@@ -1,10 +1,11 @@
 {
   "name": "isu-id-showcase",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "An unofficial, interactive 3D showcase of an Isabela State University (ISU) student ID card and lanyard.",
   "type": "module",
   "scripts": {
     "build": "node build.mjs",
+    "serve": "node -e \"const http=require('http'),fs=require('fs'),path=require('path');http.createServer((q,r)=>{let f=path.join('dist',q.url.split('?')[0]);if(f.endsWith('/')||!path.extname(f))f=path.join('dist','index.html');fs.readFile(f,(e,d)=>{if(e){r.writeHead(404);r.end();return}r.writeHead(200,{'Content-Type':{'.html':'text/html','.webp':'image/webp','.js':'text/javascript'}[path.extname(f)]||'application/octet-stream'});r.end(d)})}).listen(8000,()=>console.log('http://localhost:8000'))\"",
     "typecheck": "tsc --noEmit"
   },
   "keywords": [

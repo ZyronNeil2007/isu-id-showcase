@@ -4,6 +4,7 @@ import { M4, V3, m4, v3, DEG } from '../engine/math';
 import * as S from '../engine/shaders';
 import { slab, torus, roundedBox, capsule, sphere, sleeve, tube, catmull, Geo } from './geometry';
 import { buildPath, ribbon, Path } from './lanyard';
+import { buildHardware, GATE_PIVOT, SLEEVE_SHIFT, SLEEVE_LEN } from './hardware';
 import { handAttrs } from './handMesh';
 import { skinMatrices, poseFor, setHandUniforms } from './handRig';
 
@@ -13,7 +14,7 @@ export interface Frame {
   lightCenter: V3; lightExtent: number; shadow: boolean;
   cards: CardDraw[]; blur: M4[] | null;
   lan: { M: M4; jaw: number; hl: [number, number, number, number]; holder: M4 | null } | null;
-  hand: { M: M4; open: number; relax: number; flick: number; skin: V3 } | null;
+  hand: { M: M4; open: number; relax: number; flick: number; skin: V3; contact?: boolean } | null;
   wall: number; keyDir: V3;
 }
 export interface Textures { front: WebGLTexture; back: WebGLTexture; base: WebGLTexture; vals: WebGLTexture; flame: WebGLTexture; orn: WebGLTexture; seal: WebGLTexture; word: WebGLTexture; clip: WebGLTexture; }
@@ -43,8 +44,8 @@ export class World {
     this.cardMesh = g.mesh(attrs(card), card.idx);
     const r = ribbon(this.path);
     this.strapMesh = g.mesh([{ loc: 0, data: r.pos, size: 3 }, { loc: 1, data: r.nor, size: 3 }, { loc: 2, data: r.uv, size: 2 }, { loc: 3, data: r.tan, size: 4 }], r.idx);
-    const sl = slab(0.20, 0.50, 0.034, 0.03, 0.004, 6);
-    for (let i = 1; i < sl.pos.length; i += 3) sl.pos[i] -= 0.61;   // sleeve spans y -0.36 .. -0.86: its upper part sits inside the buckle, the rest hangs below it
+    const sl = slab(0.20, SLEEVE_LEN, 0.034, 0.03, 0.004, 6);
+    for (let i = 1; i < sl.pos.length; i += 3) sl.pos[i] += SLEEVE_SHIFT;   // short visible tab (see hardware.ts): top tucked in the buckle, bottom folded round the D-ring
     const tan = new Float32Array(sl.pos.length / 3 * 4); for (let i = 0; i < tan.length; i += 4) tan[i + 1] = 1;
     this.sleeveMesh = g.mesh(attrs(sl, [{ loc: 3, data: tan, size: 4 }]), sl.idx);
     const wq = new Float32Array([-14, -9, 0, 14, -9, 0, 14, 9, 0, -14, 9, 0]);
@@ -57,30 +58,8 @@ export class World {
       return base + cuff + 0.018 * Math.sin(5 * a + 3.2 * y) * (1 - t * 0.4) + 0.012 * Math.sin(11 * a - 5 * y) + 0.01 * Math.sin(3 * a + 9 * y);
     }, 0.92, 1.12, 90, 72);
     this.knitMesh = g.mesh(attrs(knit), knit.idx);
-    // hardware (lanyard space, origin = where the two strands meet; y points up, the card hangs towards -y)
-    const mk = (geo: Geo, M: M4, base: V3, rough: number, metal: number, gate = false) => this.hardware.push({ mesh: g.mesh(attrs(geo), geo.idx), M, base, rough, metal, jaw: gate });
-    const steel: V3 = [0.80, 0.81, 0.83], satin: V3 = [0.66, 0.68, 0.70], blk: V3 = [0.020, 0.022, 0.024], blk2: V3 = [0.006, 0.006, 0.007];
-    const T3 = (x: number, y: number, z: number) => m4.translate(x, y, z);
-    // side-release buckle: receptacle (upper) + plug (lower) with squeeze tabs, the two strands enter the top
-    mk(roundedBox(0.138, 0.14, 0.037, 0.024, 6), T3(0, -0.12, 0), blk, 0.34, 0);
-    mk(roundedBox(0.126, 0.118, 0.033, 0.02, 6), T3(0, -0.388, 0), blk, 0.34, 0);
-    mk(roundedBox(0.105, 0.004, 0.026, 0.002, 3), T3(0, -0.2625, 0), blk2, 0.6, 0);                      // seam between the halves
-    for (const sx of [-1, 1]) mk(roundedBox(0.011, 0.07, 0.024, 0.008, 5), T3(sx * 0.133, -0.385, 0), blk, 0.28, 0);   // release tabs
-    for (const sx of [-1, 1]) mk(roundedBox(0.006, 0.05, 0.02, 0.004, 3), T3(sx * 0.14, -0.15, 0), blk, 0.3, 0);       // receptacle side lugs
-    mk(roundedBox(0.092, 0.07, 0.003, 0.003, 4), T3(0, -0.12, 0.0385), blk, 0.22, 0);                     // raised panel
-    for (const y of [-0.355, -0.388, -0.421]) mk(roundedBox(0.072, 0.0035, 0.0025, 0.0015, 3), T3(0, y, 0.0335), blk, 0.3, 0);   // grip ribs
-    mk(roundedBox(0.098, 0.006, 0.02, 0.003, 3), T3(0, -0.506, 0), blk2, 0.5, 0);                         // strap slot under the plug
-    // swivel lobster clasp (face-on in the XY plane): eye, barrel, claw body, spring gate with thumb trigger
-    mk(torus(0.032, 0.0085, 40, 12), T3(0, -0.885, 0), steel, 0.17, 1);
-    mk(capsule(-0.034, 0.034, 0.0185, 24, 8), T3(0, -0.955, 0), steel, 0.2, 1);
-    mk(capsule(-0.018, 0.018, 0.0235, 24, 8), m4.mul(T3(0, -1.0, 0), m4.rotZ(Math.PI / 2)), satin, 0.24, 1);
-    const claw = catmull([[0.018, -0.997, 0], [-0.022, -1.0, 0], [-0.052, -1.035, 0], [-0.07, -1.095, 0], [-0.075, -1.165, 0], [-0.067, -1.232, 0], [-0.045, -1.288, 0], [-0.008, -1.322, 0], [0.034, -1.314, 0], [0.064, -1.274, 0], [0.076, -1.226, 0]], 7);
-    mk(tube(claw, u => 0.0132 + 0.0035 * Math.sin(Math.PI * Math.min(1, u * 1.1)), 14), m4.ident(), steel, 0.17, 1);
-    const gate = catmull([[0.030, -1.003, 0], [0.056, -1.04, 0], [0.071, -1.1, 0], [0.077, -1.17, 0], [0.076, -1.226, 0]], 7);
-    mk(tube(gate, 0.0072, 10), m4.ident(), satin, 0.2, 1, true);
-    mk(roundedBox(0.016, 0.026, 0.012, 0.008, 5), m4.mul(T3(0.058, -1.03, 0), m4.rotZ(-0.35)), satin, 0.22, 1, true);   // thumb trigger
-    // split ring in the YZ plane: it links the claw's lower bar and passes through the holder's hanging slot
-    mk(torus(0.04, 0.0062, 56, 10), m4.mul(T3(0, -1.31, 0), m4.rotY(Math.PI / 2)), steel, 0.16, 1);
+    // hardware (lanyard space, origin = where the two strands meet; y points up, the card hangs towards -y): see hardware.ts
+    for (const h of buildHardware()) this.hardware.push({ mesh: g.mesh(attrs(h.geo), h.geo.idx), M: h.M, base: h.base, rough: h.rough, metal: h.metal, jaw: h.jaw });
     const hold = slab(0.60, 0.96, 0.016, 0.05, 0.004, 8);
     this.holderMesh = g.mesh(attrs(hold), hold.idx);
     this.shadow = g.shadow(mobile ? 1024 : 2048);
@@ -144,7 +123,7 @@ export class World {
     if (f.blur && this.accOK && (!this.acc || this.acc.w !== f.w || this.acc.h !== f.h)) { if (this.acc) { gl.deleteTexture(this.acc.tex); gl.deleteFramebuffer(this.acc.fb); gl.deleteRenderbuffer(this.acc.rb); } gl.activeTexture(gl.TEXTURE0); this.acc = g.target(f.w, f.h); }
     const hand = f.hand, lan = f.lan;
     let jawM: M4 | null = null;
-    if (lan) { const px = 0.030, py = -1.003; jawM = m4.mul(m4.translate(px, py, 0), m4.mul(m4.rotZ(-lan.jaw * 0.75), m4.translate(-px, -py, 0))); }   // spring gate swings inward
+    if (lan) { const px = GATE_PIVOT[0], py = GATE_PIVOT[1]; jawM = m4.mul(m4.translate(px, py, 0), m4.mul(m4.rotZ(-lan.jaw * 0.75), m4.translate(-px, -py, 0))); }   // spring gate swings inward
     if (hand) skinMatrices(poseFor(hand.open, hand.relax, hand.flick), this.bones);
     const wm = hand ? hand.M : m4.ident();
 
@@ -161,7 +140,7 @@ export class World {
         for (const h of this.hardware) { d.m('uModel', m4.mul(lan.M, h.jaw && jawM ? m4.mul(jawM, h.M) : h.M)); g.draw(h.mesh); }
       }
       if (hand) {
-        const s = this.D.skin; s.use(); s.m('uVP', this.lightVP); s.m('uModel', wm); gl.uniformMatrix4fv(s.l('uBones'), false, this.bones); g.draw(this.handMesh);
+        const s = this.D.skin; s.use(); s.m('uVP', this.lightVP); s.m('uModel', wm); gl.uniformMatrix4fv(s.l('uBones'), false, this.bones); this.contact(s, f); g.draw(this.handMesh);
         const c = this.D.cloth; c.use(); c.m('uVP', this.lightVP); c.m('uModel', wm); g.draw(this.knitMesh);
       }
       gl.colorMask(true, true, true, true);
@@ -201,7 +180,7 @@ export class World {
       }
     }
     if (hand) {
-      const s = this.P.skin; this.common(s, f); s.m('uModel', wm); s.v3('uSkin', hand.skin); s.f('uWeight', 1); gl.uniformMatrix4fv(s.l('uBones'), false, this.bones); setHandUniforms(gl, s); g.draw(this.handMesh);
+      const s = this.P.skin; this.common(s, f); s.m('uModel', wm); s.v3('uSkin', hand.skin); s.f('uWeight', 1); gl.uniformMatrix4fv(s.l('uBones'), false, this.bones); setHandUniforms(gl, s); this.contact(s, f); g.draw(this.handMesh);
       const c = this.P.cloth; this.common(c, f); c.i('uMode', 2); c.v3('uTint', [0.035, 0.2, 0.095]); c.m('uModel', wm); c.v4('uHL', [0, 0, 0, 0]);
       gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, T.base); c.i('uBase', 0); g.draw(this.knitMesh);
     }
@@ -219,16 +198,21 @@ export class World {
     }
   }
 
+  /** card slab uniforms for the skin shaders (contact projection) */
+  private contact(s: Prog, f: Frame) {
+    const gl = this.gl, c = f.cards[0];
+    if (!f.hand || !c || !f.hand.contact) { gl.uniform1f(s.l('uCOn'), 0); return; }
+    gl.uniform1f(s.l('uCOn'), 1); gl.uniformMatrix4fv(s.l('uCI'), false, m4.invert(c.M)); gl.uniformMatrix4fv(s.l('uCM'), false, c.M);
+  }
+
   private drawBlurred(f: Frame, cp: Prog) {
     const g = this.g, gl = this.gl;
-    // cards beyond the first are drawn crisp
-    for (let i = 1; i < f.cards.length; i++) { const c = f.cards[i]; cp.m('uModel', c.M); cp.v2('uBend', c.bend[0], c.bend[1]); cp.f('uGlow', c.glow); cp.f('uWeight', 1); g.draw(this.cardMesh); }
     const acc = this.acc!;
     gl.bindFramebuffer(gl.FRAMEBUFFER, acc.fb); gl.viewport(0, 0, f.w, f.h);
     gl.clearColor(0, 0, 0, 0); gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
     // the hand is laid into the accumulation buffer's depth first, so fingers in front of the card stay in front of its blur
     gl.disable(gl.BLEND); gl.disable(gl.CULL_FACE); gl.enable(gl.DEPTH_TEST); gl.depthFunc(gl.LEQUAL); gl.depthMask(true); gl.colorMask(false, false, false, false);
-    if (f.hand) { const s = this.D.skin; s.use(); s.m('uVP', this.vp); s.m('uModel', f.hand.M); gl.uniformMatrix4fv(s.l('uBones'), false, this.bones); g.draw(this.handMesh); }
+    if (f.hand) { const s = this.D.skin; s.use(); s.m('uVP', this.vp); s.m('uModel', f.hand.M); gl.uniformMatrix4fv(s.l('uBones'), false, this.bones); this.contact(s, f); g.draw(this.handMesh); }
     gl.colorMask(true, true, true, true); gl.depthMask(false);
     gl.enable(gl.BLEND); gl.blendFunc(gl.ONE, gl.ONE); gl.enable(gl.CULL_FACE); gl.cullFace(gl.BACK);
     const c0 = f.cards[0], K = f.blur!.length; cp.use(); cp.f('uWeight', 1 / K); cp.v2('uBend', c0.bend[0], c0.bend[1]); cp.f('uGlow', c0.glow);
@@ -237,5 +221,9 @@ export class World {
     gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA); gl.depthMask(true);
     const cm = this.P.comp; cm.use(); cm.v2('uRes', f.w, f.h); gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, acc.tex); cm.i('uT', 0);
     gl.bindVertexArray(this.dummyVao); gl.drawArrays(gl.TRIANGLES, 0, 3); gl.disable(gl.BLEND); gl.enable(gl.DEPTH_TEST);
+    // the card itself goes on top, crisp and opaque and depth-tested against the hand: the blur only ever adds a streak trailing behind it
+    gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, this.tex.front); gl.activeTexture(gl.TEXTURE1); gl.bindTexture(gl.TEXTURE_2D, this.tex.back);
+    cp.use(); cp.i('uFront', 0); cp.i('uBack', 1);
+    for (const c of f.cards) { cp.m('uModel', c.M); cp.v2('uBend', c.bend[0], c.bend[1]); cp.f('uGlow', c.glow); cp.f('uWeight', 1); g.draw(this.cardMesh); }
   }
 }
